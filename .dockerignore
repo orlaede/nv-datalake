@@ -1,0 +1,10 @@
+**/.venv
+**/__pycache__
+**/*.pyc
+**/target
+**/dbt_packages
+**/logs
+**/.dg
+**/.serena
+.git
+.DS_Store

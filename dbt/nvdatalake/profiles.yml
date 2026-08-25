@@ -1,0 +1,12 @@
+nvdatalake:
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('DATALAKE_DB_HOST', 'localhost') }}"
+      port: "{{ env_var('DATALAKE_DB_PORT', '5432') | as_number }}"
+      user: "{{ env_var('DATALAKE_DB_USER', 'postgres') }}"
+      password: "{{ env_var('DATALAKE_DB_PASSWORD', 'postgres') }}"
+      dbname: "{{ env_var('DATALAKE_DB_NAME', 'nvdatalake') }}"
+      schema: bronze
+      threads: 4
+  target: dev

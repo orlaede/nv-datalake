@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: nvdatalake
+    schema: bronze
+    tables:
+      - name: nvtr_ce_eusebio__auto_infracao
+      - name: nvtr_ce_eusebio__agente
+      - name: nvtr_ce_eusebio__infracao
+      - name: nvtr_ce_eusebio__municipio
+      - name: nvtr_ce_eusebio__pessoa
+      - name: nvtr_ce_eusebio__veiculo
+      - name: nvtr_ce_eusebio__erro_consistencia
+      - name: nvtr_ce_aquiraz__auto_infracao
+      - name: nvtr_ce_aquiraz__agente
+      - name: nvtr_ce_aquiraz__infracao
+      - name: nvtr_ce_aquiraz__municipio
+      - name: nvtr_ce_aquiraz__pessoa
+      - name: nvtr_ce_aquiraz__veiculo
+      - name: nvtr_ce_aquiraz__erro_consistencia

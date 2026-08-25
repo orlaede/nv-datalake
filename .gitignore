@@ -1,0 +1,16 @@
+# OS
+.DS_Store
+
+# Secrets / local env
+.env
+.env.*
+
+# dg CLI local cache
+.dg/
+
+# Backup of dbt/'s old standalone .git dir (pre-merge into this repo)
+dbt/.git.bak/
+
+# Editors
+.vscode/
+.idea/
