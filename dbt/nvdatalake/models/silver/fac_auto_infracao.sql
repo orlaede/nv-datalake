@@ -34,7 +34,7 @@ select
     f.longitude,
     f.arquivo_ftp_id,
     f.motivo_nao_abordagem,
-    f.cod_pre_auto
+    f.motivo_cancelamento
 from {{ ref('stg_auto_infracao') }} f
 left join {{ ref('dim_agente') }} agente
     on f.source_key = agente.source_key and f.agente_id = agente.id

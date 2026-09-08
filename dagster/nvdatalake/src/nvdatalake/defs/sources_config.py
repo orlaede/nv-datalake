@@ -15,8 +15,13 @@ class SourceConfig:
 
     @property
     def env_prefix(self) -> str:
-        """Env var prefix for this source: SOURCE_<DBNAME>_<SCHEMA>_"""
-        return f"SOURCE_{self.dbname}_{self.schema}".upper()
+        """Env var prefix for this source's connection: SOURCE_<DBNAME>_
+
+        Grouped by dbname (not dbname+schema) — two SourceConfigs pointing at
+        different schemas of the same physical database share one set of
+        connection env vars.
+        """
+        return f"SOURCE_{self.dbname}".upper()
 
     @property
     def db_url(self) -> str:
@@ -35,14 +40,15 @@ def _db_url(env_prefix: str, default_dbname: str) -> str:
     )
 
 
-# One entry per source database. Env vars derive automatically from
-# dbname/schema as SOURCE_<DBNAME>_<SCHEMA>_DB_HOST/PORT/USER/PASSWORD/NAME
-# (or a single SOURCE_<DBNAME>_<SCHEMA>_DB_URL). To add a new source: append
-# a SourceConfig here, no other code changes needed.
+# One entry per (dbname, schema) pair. Env vars derive automatically from
+# dbname as SOURCE_<DBNAME>_DB_HOST/PORT/USER/PASSWORD/NAME (or a single
+# SOURCE_<DBNAME>_DB_URL) — sources sharing a dbname share connection env
+# vars, even with different schemas. To add a new source: append a
+# SourceConfig here, no other code changes needed.
 SOURCES: list[SourceConfig] = [
     SourceConfig(
         dbname="nvtr",
-        schema="ce_eusebio",
+        schema="ce_caucaia_amostra",
         tables=[
             "auto_infracao",
             "agente",
@@ -55,7 +61,7 @@ SOURCES: list[SourceConfig] = [
     ),
     SourceConfig(
         dbname="nvtr",
-        schema="ce_aquiraz",
+        schema="ce_quixada",
         tables=[
             "auto_infracao",
             "agente",

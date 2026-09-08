@@ -9,7 +9,7 @@ Plataforma de Engenharia de Dados (ELT / Data Lake) para ingestão, estruturaç�
 O projeto adota a **Medallion Architecture** (Bronze, Silver e Gold), separando a orquestração da ingestão das transformações analíticas:
 
 ```text
-                          [ Banco Origem: nvtr (schema ce_eusebio) ]
+              [ Banco Origem: nvtr (schemas ce_caucaia_amostra, ce_quixada, ...) ]
                                             │
                                             ▼ (Dagster EL / SQLAlchemy)
                           [ Data Lake: nvdatalake (schema bronze) ]
@@ -135,7 +135,12 @@ docker run --rm -w /app/dagster/nvdatalake nvdatalake:latest \
 
 ### Rodar com docker compose
 
-Ajuste o bloco `x-nvdatalake-env` no topo do `docker-compose.yml` (hosts, usuário, senha, nome de cada banco) apontando para os servidores reais — cada origem usa seu próprio prefixo de env var (`NVTR_DB_*` para a origem `nvtr`; uma origem nova adiciona seu próprio prefixo, ver [Adding a new source](dagster/nvdatalake/README.md#adding-a-new-source)), depois:
+Credenciais não ficam mais no `docker-compose.yml` — ele lê via `${VAR}` de um `.env` na raiz.
+Copia [`.env.example`](.env.example) pra `.env` e preenche com os valores reais (hosts, usuário,
+senha, nome de cada banco). `.env` é gitignored, nunca commitar credenciais nele. Cada origem
+usa seu próprio prefixo de env var, agrupado por `dbname` (`SOURCE_NVTR_DB_*` para o banco `nvtr`
+— compartilhado entre todos os schemas desse banco; uma origem com `dbname` novo usa seu próprio
+prefixo, ver [Adding a new source](dagster/nvdatalake/README.md#adding-a-new-source)), depois:
 
 ```bash
 docker compose up -d --build
@@ -153,13 +158,13 @@ Sem compose, sobem dois containers manualmente — um pro webserver, um pro daem
 
 ```bash
 docker run -d --name nvdatalake -p 3000:3000 \
-  -e SOURCE_NVTR_CE_EUSEBIO_DB_HOST=host-origem -e SOURCE_NVTR_CE_EUSEBIO_DB_PORT=5432 -e SOURCE_NVTR_CE_EUSEBIO_DB_USER=usuario -e SOURCE_NVTR_CE_EUSEBIO_DB_PASSWORD=senha -e SOURCE_NVTR_CE_EUSEBIO_DB_NAME=nvtr \
+  -e SOURCE_NVTR_DB_HOST=host-origem -e SOURCE_NVTR_DB_PORT=5432 -e SOURCE_NVTR_DB_USER=usuario -e SOURCE_NVTR_DB_PASSWORD=senha -e SOURCE_NVTR_DB_NAME=nvtr \
   -e DATALAKE_DB_HOST=host-destino -e DATALAKE_DB_PORT=5432 -e DATALAKE_DB_USER=usuario -e DATALAKE_DB_PASSWORD=senha -e DATALAKE_DB_NAME=nvdatalake \
   -v dagster_home:/app/dagster_home \
   nvdatalake:latest
 
 docker run -d --name nvdatalake-daemon \
-  -e SOURCE_NVTR_CE_EUSEBIO_DB_HOST=host-origem -e SOURCE_NVTR_CE_EUSEBIO_DB_PORT=5432 -e SOURCE_NVTR_CE_EUSEBIO_DB_USER=usuario -e SOURCE_NVTR_CE_EUSEBIO_DB_PASSWORD=senha -e SOURCE_NVTR_CE_EUSEBIO_DB_NAME=nvtr \
+  -e SOURCE_NVTR_DB_HOST=host-origem -e SOURCE_NVTR_DB_PORT=5432 -e SOURCE_NVTR_DB_USER=usuario -e SOURCE_NVTR_DB_PASSWORD=senha -e SOURCE_NVTR_DB_NAME=nvtr \
   -e DATALAKE_DB_HOST=host-destino -e DATALAKE_DB_PORT=5432 -e DATALAKE_DB_USER=usuario -e DATALAKE_DB_PASSWORD=senha -e DATALAKE_DB_NAME=nvdatalake \
   -v dagster_home:/app/dagster_home \
   nvdatalake:latest uv run dagster-daemon run
@@ -167,8 +172,22 @@ docker run -d --name nvdatalake-daemon \
 
 > `docker run` isolado (sem daemon) só serve pra rodar comandos avulsos, ex. `dagster asset materialize --select ... -m nvdatalake.definitions` — não pra manter a UI operacional com materialize funcionando.
 
+### Rodar fora do Docker (local)
+
+O script [`scripts/materialize_all.sh`](scripts/materialize_all.sh) roda a materialização
+completa local: lê `.env` (se existir), aponta o dbt pro `profiles.yml` do projeto (sem isso o
+dbt cai no `~/.dbt/profiles.yml` antigo com `localhost` fixo) e chama o `dagster asset
+materialize --select '*'`:
+
+```bash
+./scripts/materialize_all.sh
+```
+
+Atenção: se o `.env` tiver hosts tipo `host.docker.internal` (só resolve dentro de container),
+sobrescreve as vars de origem antes de rodar local, ex. `SOURCE_NVTR_DB_HOST=localhost`.
+
 ## 📊 Camadas de Dados
 
-- **Bronze**: Dados brutos extraídos do schema `ce_eusebio` (tabelas: `auto_infracao`, `agente`, `infracao`, `municipio`, `pessoa`, `veiculo`, `erro_consistencia`).
-- **Silver**: Modelos dimensionais higienizados e relacionados (`dim_agente`, `dim_infracao`, `dim_municipio`, `dim_pessoa`, `dim_veiculo`, `fac_auto_infracao`).
+- **Bronze**: Dados brutos extraídos dos schemas de origem (atualmente `ce_caucaia_amostra` e `ce_quixada` do banco `nvtr` — tabelas: `auto_infracao`, `agente`, `infracao`, `municipio`, `pessoa`, `veiculo`, `erro_consistencia`). Ver [estratégia multi-origem](dagster/nvdatalake/README.md#multi-source-strategy).
+- **Silver**: Modelos dimensionais higienizados e relacionados, com surrogate keys (`sk_*`) por dimensão (`dim_agente`, `dim_infracao`, `dim_municipio`, `dim_pessoa`, `dim_veiculo`, `dim_erro_consistencia`, `fac_auto_infracao`).
 - **Gold**: Visões analíticas agregadas para relatórios e dashboards (ex: `fac_auto_infracao_mensal`).

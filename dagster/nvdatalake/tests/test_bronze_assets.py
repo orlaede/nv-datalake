@@ -5,7 +5,7 @@ from sqlalchemy import text
 from nvdatalake.definitions import datalake_db_engine, source_db_resources
 from nvdatalake.defs.assets import bronze_assets
 
-ASSET_NAME = "bronze_nvtr_ce_eusebio__erro_consistencia"
+ASSET_NAME = "bronze_nvtr_ce_caucaia_amostra__erro_consistencia"
 
 
 def _find_asset(name):
@@ -25,7 +25,7 @@ def db_available():
 
 
 def test_materialize_bronze_erro_consistencia(db_available):
-    """Extracts nvtr.ce_eusebio.erro_consistencia and lands it in nvdatalake.bronze."""
+    """Extracts nvtr.ce_caucaia_amostra.erro_consistencia and lands it in nvdatalake.bronze."""
 
     asset_def = _find_asset(ASSET_NAME)
 
@@ -38,6 +38,6 @@ def test_materialize_bronze_erro_consistencia(db_available):
 
     with datalake_db_engine.connect() as conn:
         count = conn.execute(
-            text("select count(*) from bronze.nvtr_ce_eusebio__erro_consistencia")
+            text("select count(*) from bronze.nvtr_ce_caucaia_amostra__erro_consistencia")
         ).scalar()
     assert count > 0

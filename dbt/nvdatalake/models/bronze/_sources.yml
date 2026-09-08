@@ -2,20 +2,20 @@ version: 2
 
 sources:
   - name: bronze
-    database: nvdatalake
+    database: "{{ target.database }}"
     schema: bronze
     tables:
-      - name: nvtr_ce_eusebio__auto_infracao
-      - name: nvtr_ce_eusebio__agente
-      - name: nvtr_ce_eusebio__infracao
-      - name: nvtr_ce_eusebio__municipio
-      - name: nvtr_ce_eusebio__pessoa
-      - name: nvtr_ce_eusebio__veiculo
-      - name: nvtr_ce_eusebio__erro_consistencia
-      - name: nvtr_ce_aquiraz__auto_infracao
-      - name: nvtr_ce_aquiraz__agente
-      - name: nvtr_ce_aquiraz__infracao
-      - name: nvtr_ce_aquiraz__municipio
-      - name: nvtr_ce_aquiraz__pessoa
-      - name: nvtr_ce_aquiraz__veiculo
-      - name: nvtr_ce_aquiraz__erro_consistencia
+      - name: nvtr_ce_caucaia_amostra__auto_infracao
+      - name: nvtr_ce_caucaia_amostra__agente
+      - name: nvtr_ce_caucaia_amostra__infracao
+      - name: nvtr_ce_caucaia_amostra__municipio
+      - name: nvtr_ce_caucaia_amostra__pessoa
+      - name: nvtr_ce_caucaia_amostra__veiculo
+      - name: nvtr_ce_caucaia_amostra__erro_consistencia
+      - name: nvtr_ce_quixada__auto_infracao
+      - name: nvtr_ce_quixada__agente
+      - name: nvtr_ce_quixada__infracao
+      - name: nvtr_ce_quixada__municipio
+      - name: nvtr_ce_quixada__pessoa
+      - name: nvtr_ce_quixada__veiculo
+      - name: nvtr_ce_quixada__erro_consistencia

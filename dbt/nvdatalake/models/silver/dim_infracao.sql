@@ -14,8 +14,7 @@ with base as (
         vigencia_inicio,
         vigencia_fim,
         abordagem,
-        orientacao_fiscalizacao,
-        valor
+        orientacao_fiscalizacao
     from {{ ref('stg_infracao') }}
 )
 
@@ -35,8 +34,7 @@ select
     vigencia_inicio,
     vigencia_fim,
     abordagem,
-    orientacao_fiscalizacao,
-    valor
+    orientacao_fiscalizacao
 from base
 
 union all
@@ -57,5 +55,4 @@ select
     null as vigencia_inicio,
     null as vigencia_fim,
     null as abordagem,
-    null as orientacao_fiscalizacao,
-    null as valor
+    null as orientacao_fiscalizacao

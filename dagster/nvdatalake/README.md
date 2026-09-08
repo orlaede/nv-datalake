@@ -59,26 +59,43 @@ The bronze layer supports multiple source databases. Each source is a `SourceCon
 
 ```python
 SourceConfig(
-    dbname="nvtr",           # source database name
-    schema="ce_eusebio",     # schema in that database
+    dbname="nvtr",                    # source database name
+    schema="ce_caucaia_amostra",      # schema in that database
     tables=["auto_infracao", "agente", ...],
 )
 ```
 
-Each source's identity key is `<dbname>_<schema>` (e.g. `nvtr_ce_eusebio`), used to namespace
-everything derived from it so two sources can never collide even if they share a table name:
+Each source's identity key is `<dbname>_<schema>` (e.g. `nvtr_ce_caucaia_amostra`), used to
+namespace everything derived from it so two sources can never collide even if they share a
+table name:
 
-- Dagster resource: `source_db_<dbname>_<schema>` (e.g. `source_db_nvtr_ce_eusebio`)
-- Dagster asset: `bronze_<dbname>_<schema>__<table>` (e.g. `bronze_nvtr_ce_eusebio__agente`)
+- Dagster resource: `source_db_<dbname>_<schema>` (e.g. `source_db_nvtr_ce_caucaia_amostra`)
+- Dagster asset: `bronze_<dbname>_<schema>__<table>` (e.g. `bronze_nvtr_ce_caucaia_amostra__agente`)
 - Bronze table in `nvdatalake`: `bronze.<dbname>_<schema>__<table>`
-- Env var prefix: `SOURCE_<DBNAME>_<SCHEMA>_` (e.g. `SOURCE_NVTR_CE_EUSEBIO_`) — derived
-  automatically from `dbname`/`schema`, no manual prefix needed.
+
+The env var prefix, however, is `SOURCE_<DBNAME>_` — grouped by `dbname` only, not
+`dbname`+`schema`. Two `SourceConfig`s with the same `dbname` (different schemas of the same
+physical database) automatically share one connection, no extra config needed: both
+`nvtr_ce_caucaia_amostra` and `nvtr_ce_quixada` read `SOURCE_NVTR_DB_HOST/PORT/USER/PASSWORD/NAME`.
+
+Currently configured: `nvtr` database with schemas `ce_caucaia_amostra` and `ce_quixada`.
+
+### Schema drift between sources
+
+Different source schemas can have different columns for the "same" table (e.g. one schema has
+`pessoa.situacao_habilitacao`, the other doesn't). The `stg_*.sql` bronze models that union
+multiple sources use **explicit column lists**, not `select *` — a column missing in one source
+is filled with `null` on that side of the `union all`. When adding a source, diff its columns
+against the existing `stg_*.sql` for that table and add any new column (`null` on the sources
+that lack it) rather than switching back to `select *`, which breaks the union the moment column
+counts or ordering differ across sources.
 
 ### Adding a new source
 
 1. Append a `SourceConfig` to `SOURCES` in `sources_config.py` with `dbname`, `schema`, `tables`.
-2. Set the matching env vars: `SOURCE_<DBNAME>_<SCHEMA>_DB_HOST/PORT/USER/PASSWORD/NAME`
-   (or a single `SOURCE_<DBNAME>_<SCHEMA>_DB_URL`) — or accept the localhost/postgres defaults.
+2. If no other source already has that `dbname`, set `SOURCE_<DBNAME>_DB_HOST/PORT/USER/PASSWORD/NAME`
+   (or a single `SOURCE_<DBNAME>_DB_URL`) — or accept the localhost/postgres defaults. If a source
+   with the same `dbname` already exists, its env vars are reused automatically.
 3. Add the matching source table(s) and `stg_*.sql` model(s) in
    `dbt/nvdatalake/models/bronze/`, pointing at `source('bronze', '<dbname>_<schema>__<table>')`.
 4. Re-run — a new bronze asset per table is generated automatically, no other code changes needed.
@@ -105,6 +122,13 @@ To point at a different server:
 export DATALAKE_DB_HOST=prod-db.example.com DATALAKE_DB_PORT=5432 DATALAKE_DB_USER=nvdatalake DATALAKE_DB_PASSWORD=changeme DATALAKE_DB_NAME=nvdatalake
 ```
 
+### .env file
+
+Instead of exporting vars by hand, copy [`.env.example`](../../.env.example) (repo root) to
+`.env` and fill in real values — `.env` is gitignored, never commit credentials to it. Both
+`docker-compose.yml` (via variable interpolation) and
+[`scripts/materialize_all.sh`](../../scripts/materialize_all.sh) (via `source .env`) read it.
+
 ### Useful commands
 
 List every asset key currently registered (useful before `--select`, since names are derived):
@@ -116,14 +140,20 @@ uv run python -c "from nvdatalake.definitions import defs; print(sorted(k.to_use
 Materialize one bronze asset (extract + land in `nvdatalake.bronze`):
 
 ```bash
-uv run dagster asset materialize --select bronze_nvtr_ce_eusebio__agente -m nvdatalake.definitions
+uv run dagster asset materialize --select bronze_nvtr_ce_caucaia_amostra__agente -m nvdatalake.definitions
 ```
 
-Materialize everything (all bronze sources + all dbt models, in dependency order):
+Materialize everything (all bronze sources + all dbt models, in dependency order). Note dbt
+needs `DBT_PROFILES_DIR` pointed at the project-local `profiles.yml`, or it falls back to
+`~/.dbt/profiles.yml` and its hardcoded `localhost` defaults:
 
 ```bash
+export DBT_PROFILES_DIR="$(pwd)/../../dbt/nvdatalake"
 uv run dagster asset materialize --select '*' -m nvdatalake.definitions
 ```
+
+Or just run [`scripts/materialize_all.sh`](../../scripts/materialize_all.sh) from anywhere —
+it sources `.env`, sets `DBT_PROFILES_DIR`, and runs the same command.
 
 Run the test suite (structural tests always run; the bronze materialization test skips
 automatically if the databases aren't reachable):

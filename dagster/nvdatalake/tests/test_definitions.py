@@ -25,8 +25,8 @@ def test_dbt_models_depend_on_bronze():
     stg_key = AssetKey(["bronze", "stg_auto_infracao"])
     parents = {key.to_user_string() for key in asset_graph.get(stg_key).parent_keys}
     assert parents == {
-        "bronze_nvtr_ce_eusebio__auto_infracao",
-        "bronze_nvtr_ce_aquiraz__auto_infracao",
+        "bronze_nvtr_ce_caucaia_amostra__auto_infracao",
+        "bronze_nvtr_ce_quixada__auto_infracao",
     }
 
 
