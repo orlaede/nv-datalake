@@ -1,25 +1,26 @@
 x-nvdatalake-env: &nvdatalake-env
   # Source db "nvtr" (schema ce_eusebio) — prefix is SOURCE_<DBNAME>_<SCHEMA>_, derived
-  # automatically in sources_config.py from each SourceConfig's dbname/schema
-  SOURCE_NVTR_CE_EUSEBIO_DB_HOST: host.docker.internal
-  SOURCE_NVTR_CE_EUSEBIO_DB_PORT: "5432"
-  SOURCE_NVTR_CE_EUSEBIO_DB_USER: postgres
-  SOURCE_NVTR_CE_EUSEBIO_DB_PASSWORD: postgres
-  SOURCE_NVTR_CE_EUSEBIO_DB_NAME: nvtr
+  # automatically in sources_config.py from each SourceConfig's dbname/schema.
+  # Values come from .env (see .env.example) — never hardcode credentials here.
+  SOURCE_NVTR_CE_EUSEBIO_DB_HOST: ${SOURCE_NVTR_CE_EUSEBIO_DB_HOST}
+  SOURCE_NVTR_CE_EUSEBIO_DB_PORT: ${SOURCE_NVTR_CE_EUSEBIO_DB_PORT}
+  SOURCE_NVTR_CE_EUSEBIO_DB_USER: ${SOURCE_NVTR_CE_EUSEBIO_DB_USER}
+  SOURCE_NVTR_CE_EUSEBIO_DB_PASSWORD: ${SOURCE_NVTR_CE_EUSEBIO_DB_PASSWORD}
+  SOURCE_NVTR_CE_EUSEBIO_DB_NAME: ${SOURCE_NVTR_CE_EUSEBIO_DB_NAME}
 
   # Source db "nvtr" (schema ce_aquiraz) — same physical db, different schema/prefix
-  SOURCE_NVTR_CE_AQUIRAZ_DB_HOST: host.docker.internal
-  SOURCE_NVTR_CE_AQUIRAZ_DB_PORT: "5432"
-  SOURCE_NVTR_CE_AQUIRAZ_DB_USER: postgres
-  SOURCE_NVTR_CE_AQUIRAZ_DB_PASSWORD: postgres
-  SOURCE_NVTR_CE_AQUIRAZ_DB_NAME: nvtr
+  SOURCE_NVTR_CE_AQUIRAZ_DB_HOST: ${SOURCE_NVTR_CE_AQUIRAZ_DB_HOST}
+  SOURCE_NVTR_CE_AQUIRAZ_DB_PORT: ${SOURCE_NVTR_CE_AQUIRAZ_DB_PORT}
+  SOURCE_NVTR_CE_AQUIRAZ_DB_USER: ${SOURCE_NVTR_CE_AQUIRAZ_DB_USER}
+  SOURCE_NVTR_CE_AQUIRAZ_DB_PASSWORD: ${SOURCE_NVTR_CE_AQUIRAZ_DB_PASSWORD}
+  SOURCE_NVTR_CE_AQUIRAZ_DB_NAME: ${SOURCE_NVTR_CE_AQUIRAZ_DB_NAME}
 
   # Destination db (nvdatalake) — used by both the Dagster loader and dbt
-  DATALAKE_DB_HOST: host.docker.internal
-  DATALAKE_DB_PORT: "5432"
-  DATALAKE_DB_USER: postgres
-  DATALAKE_DB_PASSWORD: postgres
-  DATALAKE_DB_NAME: nvdatalake
+  DATALAKE_DB_HOST: ${DATALAKE_DB_HOST}
+  DATALAKE_DB_PORT: ${DATALAKE_DB_PORT}
+  DATALAKE_DB_USER: ${DATALAKE_DB_USER}
+  DATALAKE_DB_PASSWORD: ${DATALAKE_DB_PASSWORD}
+  DATALAKE_DB_NAME: ${DATALAKE_DB_NAME}
 
 services:
   nvdatalake:
