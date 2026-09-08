@@ -1,8 +1,8 @@
 x-nvdatalake-env: &nvdatalake-env
   # Source db "nvtr" — prefix is SOURCE_<DBNAME>_, derived automatically in
   # sources_config.py from each SourceConfig's dbname. Shared by every
-  # SourceConfig with dbname="nvtr" regardless of schema (ce_eusebio,
-  # ce_aquiraz, ...) since they're the same physical database.
+  # SourceConfig with dbname="nvtr" regardless of schema (ce_caucaia_amostra,
+  # ce_quixada, ...) since they're the same physical database.
   # Values come from .env (see .env.example) — never hardcode credentials here.
   SOURCE_NVTR_DB_HOST: ${SOURCE_NVTR_DB_HOST}
   SOURCE_NVTR_DB_PORT: ${SOURCE_NVTR_DB_PORT}

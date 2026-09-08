@@ -170,6 +170,8 @@ docker run -d --name nvdatalake-daemon \
   nvdatalake:latest uv run dagster-daemon run
 ```
 
+Acesse o painel do Dagster em **http://localhost:3000**.
+
 > `docker run` isolado (sem daemon) só serve pra rodar comandos avulsos, ex. `dagster asset materialize --select ... -m nvdatalake.definitions` — não pra manter a UI operacional com materialize funcionando.
 
 ### Rodar fora do Docker (local)
