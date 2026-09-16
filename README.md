@@ -1,4 +1,4 @@
-# NovaVia Data Lake (`nvdatalake`)
+# Data Lake (`nvdatalake`)
 
 Plataforma de Engenharia de Dados (ELT / Data Lake) para ingestão, estruturação e transformação de dados de trânsito e infrações de trânsito.
 
@@ -32,7 +32,7 @@ O projeto adota a **Medallion Architecture** (Bronze, Silver e Gold), separando 
 ## 📁 Estrutura do Repositório
 
 ```text
-novavia-datalake/
+nv-datalake/
 ├── dagster/
 │   └── nvdatalake/             # Projeto Dagster (Orquestração e Ingestão Bronze)
 │       ├── src/nvdatalake/
