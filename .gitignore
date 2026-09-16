@@ -15,3 +15,5 @@ dbt/.git.bak/
 # Editors
 .vscode/
 .idea/
+
+.serena/
