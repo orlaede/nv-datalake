@@ -12,7 +12,7 @@ const session: AuthSession = {
     email: "user@example.com",
     name: "Usuário Teste",
     roles: ["admin"],
-    permissions: ["dashboard.read", "autos.read", "autos.export", "users.manage", "roles.manage"],
+    permissions: ["dashboard.read", "autos.read", "autos.export", "users.read", "users.manage", "roles.manage"],
   },
 }
 
@@ -59,5 +59,8 @@ describe("App", () => {
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Recolher menu lateral" })).toBeInTheDocument()
+    expect(screen.getByRole("region", { name: "Configurações" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Usuários" })).toHaveAttribute("href", "/admin/usuarios")
+    expect(screen.getByRole("link", { name: "Roles" })).toHaveAttribute("href", "/admin/roles")
   })
 })
