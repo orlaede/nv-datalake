@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { apiGet } from "@/lib/api"
-import { useFilters, type FilterKey } from "@/lib/use-filters"
+import { FILTER_KEYS, useFilters, type FilterKey } from "@/lib/use-filters"
 
 const COMPETENCIA_OPTIONS = [
   { value: "Municipal/Rodoviário", label: "Municipal/Rodoviário" },
@@ -48,7 +48,7 @@ function AutocompleteFilter({
 }) {
   const listId = useId()
   const inputId = useId()
-  const { filters, setFilter } = useFilters()
+  const { filters, setFilter, setFilters } = useFilters()
   const selectedValue = filters[filterKey] ?? ""
   const [inputValue, setInputValue] = useState(selectedValue)
   const [open, setOpen] = useState(false)
@@ -87,7 +87,14 @@ function AutocompleteFilter({
         onChange={(e) => {
           const nextValue = e.target.value
           setInputValue(nextValue)
-          if (!nextValue) setFilter(filterKey, "")
+          if (!nextValue) {
+            const hasOtherTextFilter = AUTOCOMPLETE_FILTERS.some((key) => key !== filterKey && filters[key])
+            if (hasOtherTextFilter) {
+              setFilter(filterKey, "")
+            } else {
+              setFilters(Object.fromEntries(FILTER_KEYS.map((key) => [key, undefined])))
+            }
+          }
           setOpen(true)
         }}
         onFocus={() => setOpen(true)}
@@ -188,7 +195,7 @@ function SelectFilter({
   return (
     <Select
       value={filters[filterKey] ?? ALL_OPTION_VALUE}
-      onValueChange={(value) => setFilter(filterKey, value === ALL_OPTION_VALUE ? "" : value)}
+      onValueChange={(value) => setFilter(filterKey, !value || value === ALL_OPTION_VALUE ? "" : value)}
     >
       <SelectTrigger className="w-full">
         <SelectValue placeholder={placeholder}>
@@ -208,9 +215,11 @@ function SelectFilter({
 }
 
 export function FilterBar() {
+  const { filters } = useFilters()
+
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <CustomDateRangeFilter />
+      {filters.periodo_data === "customizado" && <CustomDateRangeFilter />}
       <AutocompleteFilter filterKey="agente" placeholder="Agente de trânsito" />
       <AutocompleteFilter filterKey="local" placeholder="Local da infração" />
       <SelectFilter filterKey="tipo" placeholder="Tipo (com/sem abordagem)" options={TIPO_OPTIONS} />

@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001"
+import { apiRequestResponse } from "./api"
 
 async function downloadExport(
   endpoint: string,
@@ -12,7 +12,7 @@ async function downloadExport(
   }
   if (groupBy.length) search.set("groupBy", groupBy.join(","))
 
-  const res = await fetch(`${API_URL}${endpoint}?${search.toString()}`)
+  const res = await apiRequestResponse(`${endpoint}?${search.toString()}`)
   if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`)
 
   const blob = await res.blob()

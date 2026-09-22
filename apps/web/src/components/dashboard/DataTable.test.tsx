@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import type { ReactElement } from "react"
 import { DataTable } from "./DataTable"
 
 const baseRow = {
@@ -17,9 +19,17 @@ const baseRow = {
   status: "Válido",
 }
 
+function renderTable(element: ReactElement) {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      {element}
+    </QueryClientProvider>
+  )
+}
+
 describe("DataTable", () => {
   it("uses semantic badge colors based on the real Status do Auto value", () => {
-    render(
+    renderTable(
       <DataTable
         rows={[
           baseRow,
@@ -37,6 +47,7 @@ describe("DataTable", () => {
         total={2}
         onPageChange={vi.fn()}
         onPageSizeChange={vi.fn()}
+        filters={{}}
       />
     )
 
@@ -45,7 +56,7 @@ describe("DataTable", () => {
   })
 
   it("renders every field as a column", () => {
-    render(
+    renderTable(
       <DataTable
         rows={[baseRow]}
         page={1}
@@ -53,6 +64,7 @@ describe("DataTable", () => {
         total={1}
         onPageChange={vi.fn()}
         onPageSizeChange={vi.fn()}
+        filters={{}}
       />
     )
 
@@ -66,7 +78,7 @@ describe("DataTable", () => {
 
   it("wires the pagination controls", () => {
     const onPageChange = vi.fn()
-    render(
+    renderTable(
       <DataTable
         rows={[baseRow]}
         page={1}
@@ -74,6 +86,7 @@ describe("DataTable", () => {
         total={100}
         onPageChange={onPageChange}
         onPageSizeChange={vi.fn()}
+        filters={{}}
       />
     )
     fireEvent.click(screen.getByRole("button", { name: "Próxima página" }))

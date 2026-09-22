@@ -1,17 +1,22 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { Dashboard } from "./routes/Dashboard"
 import { Listagem } from "./routes/Listagem"
+import { Login } from "./routes/Login"
 import { AppShell } from "./components/layout/AppShell"
+import { ProtectedRoute } from "./components/auth/ProtectedRoute"
 
 export default function App() {
   return (
     <BrowserRouter>
-      <AppShell>
-        <Routes>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppShell />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/autos" element={<Listagem />} />
-        </Routes>
-      </AppShell>
+          </Route>
+        </Route>
+      </Routes>
     </BrowserRouter>
   )
 }

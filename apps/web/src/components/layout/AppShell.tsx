@@ -1,17 +1,19 @@
 import { useState, type ReactNode } from "react"
-import { NavLink, useLocation } from "react-router-dom"
+import { NavLink, Outlet, useLocation } from "react-router-dom"
 import { LayoutDashboard, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/lib/auth"
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/autos", label: "Listagem", icon: ListChecks },
 ]
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children }: { children?: ReactNode }) {
   const [collapsed, setCollapsed] = useState(true)
   const location = useLocation()
+  const { user, logout } = useAuth()
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -72,7 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">Novavia</div>
+              <div className="truncate text-sm font-medium">{user?.name ?? "Novavia"}</div>
             </div>
           )}
           {!collapsed && (
@@ -82,6 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               size="icon"
               aria-label="Sair"
               className="shrink-0"
+              onClick={() => void logout()}
             >
               <LogOut className="size-4" />
             </Button>
@@ -90,7 +93,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <main className={cn("min-h-screen transition-[padding] duration-200 ease-out", collapsed ? "pl-16" : "pl-64")}>
-        {children}
+        {children ?? <Outlet />}
       </main>
     </div>
   )
