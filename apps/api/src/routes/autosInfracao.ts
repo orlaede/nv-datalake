@@ -1,6 +1,7 @@
 import { Router } from "express"
 import ExcelJS from "exceljs"
 import PDFDocument from "pdfkit"
+import { requirePermission } from "../auth/middleware"
 import { pool } from "../db"
 import { buildAutoInfracaoWhere, type AutoInfracaoFilters } from "../queries/autoInfracaoFilters"
 import { bucketSqlExpression, formatBucketKey, generateBuckets, resolveGranularity } from "../queries/serieTemporal"
@@ -344,7 +345,7 @@ async function fetchExportRows(filters: AutoInfracaoFilters, groupBy: GroupKey[]
   return listResult.rows as Record<string, unknown>[]
 }
 
-autosInfracaoRouter.get("/api/autos-infracao/export", async (req, res) => {
+autosInfracaoRouter.get("/api/autos-infracao/export", requirePermission("autos.export"), async (req, res) => {
   const filters = extractFilters(req.query as Record<string, unknown>)
   const groupBy = parseGroupBy(req.query as Record<string, unknown>)
   const rows = await fetchExportRows(filters, groupBy)
@@ -471,7 +472,7 @@ function writePdfRows(
   return y
 }
 
-autosInfracaoRouter.get("/api/autos-infracao/export-pdf", async (req, res) => {
+autosInfracaoRouter.get("/api/autos-infracao/export-pdf", requirePermission("autos.export"), async (req, res) => {
   const filters = extractFilters(req.query as Record<string, unknown>)
   const groupBy = parseGroupBy(req.query as Record<string, unknown>)
   const rows = await fetchExportRows(filters, groupBy)

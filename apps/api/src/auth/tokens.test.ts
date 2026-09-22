@@ -17,6 +17,7 @@ const config: AuthConfig = {
   refreshTokenTtlDays: 30,
   refreshCookieName: "test_refresh",
   cookieSecure: false,
+  allowedOrigin: "http://localhost:5173",
 }
 
 describe("token primitives", () => {

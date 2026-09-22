@@ -1,8 +1,10 @@
 import { Router, type Request } from "express"
 import rateLimit from "express-rate-limit"
 import { getAuthConfig } from "../auth/config"
+import { authenticateJwt } from "../auth/middleware"
 import { AuthError, login, logout, refresh } from "../auth/service"
 import { clearRefreshCookie, parseRefreshCookie, serializeRefreshCookie } from "../auth/tokens"
+import type { AuthRequest } from "../auth/types"
 
 function requestContext(req: Request) {
   return {
@@ -72,4 +74,13 @@ authRouter.post("/api/auth/logout", async (req, res) => {
     res.append("Set-Cookie", clearRefreshCookie(config))
     res.status(204).send()
   }
+})
+
+authRouter.get("/api/auth/me", authenticateJwt, (req, res) => {
+  const user = (req as AuthRequest).authUser
+  if (!user) {
+    res.status(401).json({ error: "Autenticação necessária" })
+    return
+  }
+  res.json({ user })
 })

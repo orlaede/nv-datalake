@@ -1,3 +1,5 @@
+import type { Request } from "express"
+
 export type AuthUserRecord = {
   userId: string
   email: string
@@ -23,6 +25,10 @@ export type PublicUser = {
   name: string
   roles: string[]
   permissions: string[]
+}
+
+export type AuthRequest = Request & {
+  authUser?: PublicUser
 }
 
 export type AuthContext = {

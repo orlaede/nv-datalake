@@ -18,5 +18,6 @@ export function getAuthConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig 
     refreshTokenTtlDays: Number(env.AUTH_REFRESH_TOKEN_TTL_DAYS ?? 30),
     refreshCookieName: env.AUTH_REFRESH_COOKIE_NAME ?? "nv_refresh",
     cookieSecure: env.AUTH_COOKIE_SECURE === "true" || (production && env.AUTH_COOKIE_SECURE !== "false"),
+    allowedOrigin: env.AUTH_ALLOWED_ORIGIN ?? "http://localhost:5173",
   }
 }

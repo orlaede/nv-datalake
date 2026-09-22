@@ -9,6 +9,7 @@ export type AuthConfig = {
   refreshTokenTtlDays: number
   refreshCookieName: string
   cookieSecure: boolean
+  allowedOrigin: string
 }
 
 export type AccessTokenClaims = JWTPayload & {
@@ -99,6 +100,7 @@ export function parseRefreshCookie(cookieHeader: string | undefined, config: Aut
   refreshTokenTtlDays: 30,
   refreshCookieName: "nv_refresh",
   cookieSecure: false,
+  allowedOrigin: "http://localhost:5173",
 }): string | null {
   if (!cookieHeader) return null
   const prefix = `${config.refreshCookieName}=`

@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import request from "supertest"
-import { createApp } from "../server"
+import { createApp as buildApp } from "../server"
 import { pool } from "../db"
 
 vi.mock("../db", () => ({
   pool: { query: vi.fn() },
 }))
+
+const createApp = () => buildApp({ disableAuth: true })
 
 describe("GET /api/autos-infracao", () => {
   beforeEach(() => {
@@ -81,6 +83,14 @@ describe("GET /api/autos-infracao", () => {
     const res = await request(app).get("/api/autos-infracao").query({ pageSize: "abc" })
 
     expect(res.status).toBe(400)
+    expect(pool.query).not.toHaveBeenCalled()
+  })
+
+  it("rejects requests without a JWT", async () => {
+    const res = await request(buildApp()).get("/api/autos-infracao")
+
+    expect(res.status).toBe(401)
+    expect(res.body).toEqual({ error: "Autenticação necessária" })
     expect(pool.query).not.toHaveBeenCalled()
   })
 })
