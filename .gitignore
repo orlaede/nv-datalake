@@ -17,3 +17,6 @@ dbt/.git.bak/
 .idea/
 
 .serena/
+
+# Node dependencies
+node_modules/
