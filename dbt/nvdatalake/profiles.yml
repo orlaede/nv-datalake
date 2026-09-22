@@ -8,5 +8,6 @@ nvdatalake:
       password: "{{ env_var('DATALAKE_DB_PASSWORD', 'postgres') }}"
       dbname: "{{ env_var('DATALAKE_DB_NAME', 'nvdatalake') }}"
       schema: bronze
+      sslmode: "{{ env_var('PGSSLMODE', 'require') }}"
       threads: 4
   target: dev

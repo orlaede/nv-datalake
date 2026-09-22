@@ -26,6 +26,8 @@ O projeto adota a **Medallion Architecture** (Bronze, Silver e Gold), separando 
 - **[dbt (data build tool)](https://www.getdbt.com/)**: Transformações SQL, tratamentos de dados e modelagem dimensional nas camadas Bronze, Silver e Gold.
 - **[PostgreSQL](https://www.postgresql.org/)**: Banco de dados relacional para a origem (`nvtr`) e o Data Lake (`nvdatalake`).
 - **[uv](https://docs.astral.sh/uv/)**: Gerenciador de pacotes e ambientes virtuais Python.
+- **[React](https://react.dev/) + [Vite](https://vite.dev/)**: Aplicação web para dashboards e consultas de infrações.
+- **[Express](https://expressjs.com/)**: API HTTP que fornece os dados consumidos pela aplicação web.
 
 ---
 
@@ -33,6 +35,9 @@ O projeto adota a **Medallion Architecture** (Bronze, Silver e Gold), separando 
 
 ```text
 nv-datalake/
+├── apps/
+│   ├── api/                    # API HTTP (Express) para consultas e exportações
+│   └── web/                    # Aplicação web (React + Vite) para dashboards e listagens
 ├── dagster/
 │   └── nvdatalake/             # Projeto Dagster (Orquestração e Ingestão Bronze)
 │       ├── src/nvdatalake/
@@ -53,6 +58,40 @@ nv-datalake/
 │       └── macros/
 └── README.md                   # Documentação principal do repositório
 ```
+
+As aplicações em `apps/` são a camada de acesso e visualização dos dados processados
+no Data Lake: a API expõe consultas e exportações, enquanto o web disponibiliza os
+dashboards e as listagens para os usuários.
+
+### Executar as aplicações localmente
+
+As aplicações possuem seus próprios `package.json` e são executadas separadamente.
+É necessário ter **Node.js** e **npm** instalados.
+
+#### API
+
+```bash
+cd apps/api
+npm install
+cp .env.example .env
+npm run dev
+```
+
+A API inicia, por padrão, em **http://localhost:3001**.
+
+#### Web
+
+Em outro terminal:
+
+```bash
+cd apps/web
+npm install
+cp .env.example .env
+npm run dev
+```
+
+A aplicação web usa `VITE_API_URL` para localizar a API — por padrão,
+`http://localhost:3001` — e fica disponível no endereço exibido pelo Vite.
 
 ---
 

@@ -1,0 +1,97 @@
+import { useState, type ReactNode } from "react"
+import { NavLink, useLocation } from "react-router-dom"
+import { LayoutDashboard, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+
+const navItems = [
+  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/autos", label: "Listagem", icon: ListChecks },
+]
+
+export function AppShell({ children }: { children: ReactNode }) {
+  const [collapsed, setCollapsed] = useState(true)
+  const location = useLocation()
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-10 flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out",
+          collapsed ? "w-16" : "w-64"
+        )}
+      >
+        <div className="flex h-14 items-center justify-between px-3">
+          {!collapsed && (
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold">Central de Dados</div>
+              <div className="truncate text-xs text-muted-foreground">Novavia Data</div>
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={collapsed ? "Expandir menu lateral" : "Recolher menu lateral"}
+            onClick={() => setCollapsed((value) => !value)}
+            className="shrink-0"
+          >
+            {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+          </Button>
+        </div>
+
+        <nav aria-label="Navegação principal" className="flex flex-1 flex-col gap-1 px-2 py-2">
+          {navItems.map((item) => {
+            const Icon = item.icon
+            return (
+              <NavLink
+                key={item.to}
+                to={`${item.to}${location.search}`}
+                end={item.to === "/"}
+                aria-label={collapsed ? `Abrir ${item.label}` : undefined}
+                className={({ isActive }) =>
+                  cn(
+                    "flex h-9 items-center gap-2 rounded-lg px-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    collapsed && "justify-center"
+                  )
+                }
+              >
+                <Icon className="size-4 shrink-0" />
+                {!collapsed && <span>{item.label}</span>}
+              </NavLink>
+            )
+          })}
+        </nav>
+
+        <div className={cn("flex items-center gap-2 border-t border-sidebar-border px-2 py-3", collapsed && "justify-center")}>
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+            N
+          </div>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium">Novavia</div>
+            </div>
+          )}
+          {!collapsed && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Sair"
+              className="shrink-0"
+            >
+              <LogOut className="size-4" />
+            </Button>
+          )}
+        </div>
+      </aside>
+
+      <main className={cn("min-h-screen transition-[padding] duration-200 ease-out", collapsed ? "pl-16" : "pl-64")}>
+        {children}
+      </main>
+    </div>
+  )
+}
