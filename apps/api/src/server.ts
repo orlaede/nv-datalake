@@ -5,6 +5,7 @@ import { authenticateJwt, requirePermission } from "./auth/middleware"
 import { healthRouter } from "./routes/health"
 import { autosInfracaoRouter } from "./routes/autosInfracao"
 import { authRouter } from "./routes/auth"
+import { adminRouter } from "./routes/admin"
 
 export function createApp(options: { disableAuth?: boolean } = {}) {
   const app = express()
@@ -12,6 +13,7 @@ export function createApp(options: { disableAuth?: boolean } = {}) {
   app.use(express.json())
   app.use(healthRouter)
   app.use(authRouter)
+  app.use(adminRouter)
   if (!options.disableAuth) {
     app.use("/api/autos-infracao", authenticateJwt, requirePermission("autos.read"))
   }

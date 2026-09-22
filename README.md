@@ -93,6 +93,48 @@ npm run dev
 A aplicação web usa `VITE_API_URL` para localizar a API — por padrão,
 `http://localhost:3001` — e fica disponível no endereço exibido pelo Vite.
 
+### Controle de acesso
+
+A API usa autenticação própria por e-mail e senha, com senha armazenada em
+Argon2id. O access token JWT fica em memória no web e o refresh token é
+rotacionado em cookie `HttpOnly`. Em produção, configure um segredo JWT com no
+mínimo 32 caracteres, `AUTH_COOKIE_SECURE=true` e `AUTH_ALLOWED_ORIGIN` com a
+origem pública do web.
+
+Aplique as migrações no Data Lake, nesta ordem:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f db/migrations/001_auth_schema.sql \
+  -f db/migrations/002_auth_seed.sql
+```
+
+Se `DATABASE_URL` não for usado, monte a conexão com as variáveis
+`DATALAKE_DB_HOST`, `DATALAKE_DB_PORT`, `DATALAKE_DB_USER`, `DATALAKE_DB_PASSWORD`
+e `DATALAKE_DB_NAME`. Depois crie o primeiro administrador de forma interativa:
+
+```bash
+cd apps/api
+npm run create-admin
+```
+
+O comando é idempotente para o mesmo e-mail e não imprime a senha. A
+administração está disponível pela API em `/api/admin/users`,
+`/api/admin/roles` e `/api/admin/permissions`.
+
+| Permissão | Responsabilidade |
+| --- | --- |
+| `dashboard.read` | Visualizar indicadores |
+| `autos.read` | Consultar autos e agrupamentos |
+| `autos.export` | Exportar Excel e PDF |
+| `users.read` | Listar usuários |
+| `users.manage` | Criar, editar, ativar, desativar e revogar sessões |
+| `roles.manage` | Administrar roles e permissões atribuídas |
+
+As rotas de autos exigem `autos.read`; as exportações também exigem
+`autos.export`. O endpoint `/health` e os endpoints de login, refresh e logout
+permanecem públicos.
+
 ---
 
 ## 🚀 Como Executar o Projeto
