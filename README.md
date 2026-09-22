@@ -90,8 +90,10 @@ cp .env.example .env
 npm run dev
 ```
 
-A aplicação web usa `VITE_API_URL` para localizar a API — por padrão,
-`http://localhost:3001` — e fica disponível no endereço exibido pelo Vite.
+A aplicação web usa `VITE_API_URL` para localizar a API — em desenvolvimento,
+por padrão, `http://localhost:3001` — e fica disponível no endereço exibido
+pelo Vite. Em produção, quando web e API usam o mesmo domínio por reverse
+proxy, deixe `VITE_API_URL` vazio para que o web use URLs relativas.
 
 ### Controle de acesso
 
@@ -101,7 +103,7 @@ rotacionado em cookie `HttpOnly`. Em produção, configure um segredo JWT com no
 mínimo 32 caracteres, `AUTH_COOKIE_SECURE=true` e `AUTH_ALLOWED_ORIGIN` com a
 origem pública do web.
 
-Aplique as migrações no Data Lake, nesta ordem:
+Aplique as migrações no Data Lake, nesta ordem (elas são idempotentes):
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \

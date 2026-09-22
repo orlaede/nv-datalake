@@ -1,5 +1,7 @@
 # Controle de acesso JWT Implementation Plan
 
+> Status: concluído em 22/09/2026. A implementação foi registrada na `main` em commits separados por tarefa; a integração e as migrações finais também foram verificadas.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement the approved local e-mail/password authentication, JWT sessions, functional authorization, protected web routes, and user/role administration.
