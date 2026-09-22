@@ -20,3 +20,4 @@ dbt/.git.bak/
 
 # Node dependencies
 node_modules/
+dist/
