@@ -9,7 +9,17 @@ import { adminRouter } from "./routes/admin"
 
 export function createApp(options: { disableAuth?: boolean } = {}) {
   const app = express()
-  app.use(cors({ origin: getAuthConfig().allowedOrigin, credentials: true }))
+  const allowedOrigins = getAuthConfig().allowedOrigin.split(",").map((origin) => origin.trim()).filter(Boolean)
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, origin ?? true)
+        return
+      }
+      callback(new Error("Origin não permitido"))
+    },
+    credentials: true,
+  }))
   app.use(express.json())
   app.use(healthRouter)
   app.use(authRouter)
