@@ -1,19 +1,21 @@
 import { useState, type ReactNode } from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
-import { LayoutDashboard, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { LayoutDashboard, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, ShieldCheck, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth"
 
 const navItems = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/autos", label: "Listagem", icon: ListChecks },
+  { to: "/", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.read" },
+  { to: "/autos", label: "Listagem", icon: ListChecks, permission: "autos.read" },
+  { to: "/admin/usuarios", label: "Usuários", icon: Users, permission: "users.read" },
+  { to: "/admin/roles", label: "Roles", icon: ShieldCheck, permission: "roles.manage" },
 ]
 
 export function AppShell({ children }: { children?: ReactNode }) {
   const [collapsed, setCollapsed] = useState(true)
   const location = useLocation()
-  const { user, logout } = useAuth()
+  const { user, logout, hasPermission } = useAuth()
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -43,7 +45,7 @@ export function AppShell({ children }: { children?: ReactNode }) {
         </div>
 
         <nav aria-label="Navegação principal" className="flex flex-1 flex-col gap-1 px-2 py-2">
-          {navItems.map((item) => {
+          {navItems.filter((item) => hasPermission(item.permission)).map((item) => {
             const Icon = item.icon
             return (
               <NavLink
