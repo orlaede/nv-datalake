@@ -274,5 +274,5 @@ sobrescreve as vars de origem antes de rodar local, ex. `SOURCE_NVTR_DB_HOST=loc
 ## 📊 Camadas de Dados
 
 - **Bronze**: Dados brutos extraídos dos schemas de origem (atualmente `ce_caucaia_amostra` e `ce_quixada` do banco `nvtr` — tabelas: `auto_infracao`, `agente`, `infracao`, `municipio`, `pessoa`, `veiculo`, `erro_consistencia`). Ver [estratégia multi-origem](dagster/nvdatalake/README.md#multi-source-strategy).
-- **Silver**: Modelos dimensionais higienizados e relacionados, com surrogate keys (`sk_*`) por dimensão (`dim_agente`, `dim_infracao`, `dim_municipio`, `dim_pessoa`, `dim_veiculo`, `dim_erro_consistencia`, `fac_auto_infracao`).
-- **Gold**: Visões analíticas agregadas para relatórios e dashboards (ex: `fac_auto_infracao_mensal`).
+- **Silver**: Modelos dimensionais higienizados e relacionados, com surrogate keys (`sk_*`) por dimensão (`dim_agente`, `dim_infracao`, `dim_municipio`, `dim_pessoa`, `dim_veiculo`, `dim_erro_consistencia`, `dim_origem`, `fac_auto_infracao`).
+- **Gold**: Camada de apresentação autocontida: dimensões espelhadas em `gold.*` (incluindo `dim_origem`, derivada do `source_key`) e fatos (`fac_auto_infracao` com coluna "Origem", `fac_auto_infracao_mensal` com `sk_origem`).
