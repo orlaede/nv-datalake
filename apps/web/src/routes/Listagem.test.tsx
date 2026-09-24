@@ -72,7 +72,8 @@ describe("Listagem", () => {
     expect(screen.getByRole("button", { name: "Próxima página" })).toBeDisabled()
 
     const fetchMock = vi.mocked(fetch)
-    const requestedUrl = fetchMock.mock.calls[0][0] as string
+    const autosCall = fetchMock.mock.calls.find((call) => String(call[0]).includes("page="))
+    const requestedUrl = autosCall?.[0] as string
     expect(requestedUrl).toContain("page=1")
     expect(requestedUrl).toContain("pageSize=25")
   })
