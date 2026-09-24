@@ -287,6 +287,9 @@ describe("GET /api/autos-infracao/stats — dashboard chart fields", () => {
     expect(calls[6][0]).toContain(`${TIPO_EXPR} AS tipo`)
     expect(calls[6][0]).toContain(`GROUP BY ${TIPO_EXPR}`)
     expect(calls[7][0]).toContain(`${COMPETENCIA_EXPR} AS competencia`)
+    expect(calls[7][0]).toContain(`GROUP BY ${COMPETENCIA_EXPR}`)
+    expect(calls[8][0]).toContain(`GROUP BY to_char(ai.data_hora, 'YYYY-MM')`)
+    expect(calls[9][0]).toContain(`GROUP BY to_char(ai.data_hora, 'YYYY-MM')`)
   })
 })
 
