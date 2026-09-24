@@ -1,6 +1,7 @@
 import { useSearchParams } from "react-router-dom"
 
 export const FILTER_KEYS = [
+  "origem",
   "agente",
   "local",
   "tipo",
