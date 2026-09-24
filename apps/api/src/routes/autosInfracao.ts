@@ -596,7 +596,7 @@ autosInfracaoRouter.get("/api/autos-infracao/stats", async (req, res) => {
        COUNT(*) AS total
      FROM ${GOLD_STAR_FROM}
      ${cancelamentoClause}
-     GROUP BY motivo_cancelamento
+     GROUP BY ${MOTIVO_CANCELAMENTO_EXPR}
      ORDER BY total DESC`,
       params
     ),
@@ -611,7 +611,7 @@ autosInfracaoRouter.get("/api/autos-infracao/stats", async (req, res) => {
       params
     ),
     pool.query(
-      `SELECT ${COMPETENCIA_EXPR} AS competencia, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${clause} GROUP BY competencia ORDER BY total DESC`,
+      `SELECT ${COMPETENCIA_EXPR} AS competencia, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${clause} GROUP BY ${COMPETENCIA_EXPR} ORDER BY total DESC`,
       params
     ),
     pool.query(

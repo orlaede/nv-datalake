@@ -158,6 +158,7 @@ describe("GET /api/autos-infracao/stats", () => {
     expect(agentCall[0]).toContain(`${AGENTE_EXPR} AS agente`)
     expect(agentCall[0]).toContain("LIMIT 10")
     expect(groupCall[0]).toContain("GROUP BY")
+    expect(groupCall[0]).toContain(`GROUP BY ${MOTIVO_CANCELAMENTO_EXPR}`)
     expect(groupCall[0]).toContain(`${COMPETENCIA_EXPR} = $1 AND (`)
   })
 })
