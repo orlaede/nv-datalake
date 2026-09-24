@@ -4,6 +4,7 @@ select
     ai.data_hora as "Data e Hora",
     ai.num_auto as "Número do Auto",
     ai.android_serial as "Equipamento",
+    origem.nome as "Origem",
     agente.nome as "Nome do Agente",
     infracao.codigo as "Código da Infração",
     case
@@ -52,7 +53,9 @@ select
     ai.logradouro as "Logradouro",
     ai.numero
 from {{ ref('fac_auto_infracao') }} ai
-left join {{ ref('dim_agente') }} agente
+left join {{ ref('dim_agente_gold') }} agente
     on agente.sk_agente = ai.sk_agente
-left join {{ ref('dim_infracao') }} infracao
+left join {{ ref('dim_infracao_gold') }} infracao
     on infracao.sk_infracao = ai.sk_infracao
+left join {{ ref('dim_origem_gold') }} origem
+    on origem.sk_origem = ai.sk_origem
