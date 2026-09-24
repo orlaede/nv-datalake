@@ -4,6 +4,19 @@ import PDFDocument from "pdfkit"
 import { requirePermission } from "../auth/middleware"
 import { pool } from "../db"
 import { buildAutoInfracaoWhere, type AutoInfracaoFilters } from "../queries/autoInfracaoFilters"
+import {
+  AGENTE_EXPR,
+  CODIGO_EXPR,
+  COMPETENCIA_EXPR,
+  DATA_HORA_EXPR,
+  EQUIPAMENTO_EXPR,
+  GOLD_STAR_FROM,
+  LOCAL_EXPR,
+  MOTIVO_CANCELAMENTO_EXPR,
+  PERIODO_EXPR,
+  STATUS_EXPR,
+  TIPO_EXPR,
+} from "../queries/goldStarExpressions"
 import { bucketSqlExpression, formatBucketKey, generateBuckets, resolveGranularity } from "../queries/serieTemporal"
 
 export const autosInfracaoRouter = Router()
@@ -134,57 +147,47 @@ function parseGroupBy(query: Record<string, unknown>): GroupKey[] {
     .filter((key): key is GroupKey => GROUP_KEYS.has(key))
 }
 
-const VIEW = "gold.fac_auto_infracao"
-
 const LIST_COLUMNS_SQL = `
-       "Data e Hora" AS data_hora,
-       "Nome do Agente" AS agente,
-       "Logradouro" AS local,
-       "Tipo Infração" AS tipo,
-       "Código da Infração"::text AS codigo,
-       "Número do Auto"::text AS numero_auto,
-       "Equipamento" AS equipamento,
-       "Turno" AS periodo,
-       "Competência" AS competencia,
-       COALESCE("Justificativa do Cancelamento pelo Agente", "Justificativa do Cancelamento pelo Gestor") AS motivo_cancelamento,
-       "Status do Auto" AS status`
+       ai.data_hora AS data_hora,
+       ${AGENTE_EXPR} AS agente,
+       ${LOCAL_EXPR} AS local,
+       ${TIPO_EXPR} AS tipo,
+       ${CODIGO_EXPR} AS codigo,
+       ai.num_auto::text AS numero_auto,
+       ${EQUIPAMENTO_EXPR} AS equipamento,
+       ${PERIODO_EXPR} AS periodo,
+       ${COMPETENCIA_EXPR} AS competencia,
+       ${MOTIVO_CANCELAMENTO_EXPR} AS motivo_cancelamento,
+       ${STATUS_EXPR} AS status`
 
 const GROUP_COLUMN_EXPR: Record<GroupKey, string> = {
-  numero_auto: `"Número do Auto"::text`,
-  data_hora: `"Data e Hora"`,
-  agente: `"Nome do Agente"`,
-  codigo: `"Código da Infração"::text`,
-  local: `"Logradouro"`,
-  tipo: `"Tipo Infração"`,
-  equipamento: `"Equipamento"`,
-  periodo: `"Turno"`,
-  competencia: `"Competência"`,
-  motivo_cancelamento: `COALESCE("Justificativa do Cancelamento pelo Agente", "Justificativa do Cancelamento pelo Gestor")`,
-  status: `"Status do Auto"`,
-  ano: `to_char("Data e Hora", 'YYYY')`,
-  mes: `to_char("Data e Hora", 'YYYY-MM')`,
-  dia: `to_char("Data e Hora", 'YYYY-MM-DD')`,
-  hora: `to_char("Data e Hora", 'HH24')`,
-  semana_ano: `to_char("Data e Hora", 'IYYY-"W"IW')`,
-  dia_semana: `CASE EXTRACT(ISODOW FROM "Data e Hora")
-    WHEN 1 THEN 'Segunda-feira'
-    WHEN 2 THEN 'Terça-feira'
-    WHEN 3 THEN 'Quarta-feira'
-    WHEN 4 THEN 'Quinta-feira'
-    WHEN 5 THEN 'Sexta-feira'
-    WHEN 6 THEN 'Sábado'
-    ELSE 'Domingo'
-  END`,
+  numero_auto: `ai.num_auto::text`,
+  data_hora: DATA_HORA_EXPR,
+  agente: AGENTE_EXPR,
+  codigo: CODIGO_EXPR,
+  local: LOCAL_EXPR,
+  tipo: TIPO_EXPR,
+  equipamento: EQUIPAMENTO_EXPR,
+  periodo: PERIODO_EXPR,
+  competencia: COMPETENCIA_EXPR,
+  motivo_cancelamento: MOTIVO_CANCELAMENTO_EXPR,
+  status: STATUS_EXPR,
+  ano: `to_char(ai.data_hora, 'YYYY')`,
+  mes: `to_char(ai.data_hora, 'YYYY-MM')`,
+  dia: `to_char(ai.data_hora, 'YYYY-MM-DD')`,
+  hora: `to_char(ai.data_hora, 'HH24')`,
+  semana_ano: `to_char(ai.data_hora, 'IYYY-"W"IW')`,
+  dia_semana: `case extract(isodow from ai.data_hora) when 1 then 'Segunda-feira' when 2 then 'Terça-feira' when 3 then 'Quarta-feira' when 4 then 'Quinta-feira' when 5 then 'Sexta-feira' when 6 then 'Sábado' else 'Domingo' end`,
 }
 
 const DATE_GROUP_KEYS = new Set<string>(Object.keys(DATE_GROUP_HEADER_BY_KEY))
 
 const SUGGESTION_FIELDS = {
-  agente: `"Nome do Agente"`,
-  local: `"Logradouro"`,
-  codigo: `"Código da Infração"::text`,
-  equipamento: `"Equipamento"`,
-  motivo_cancelamento: `COALESCE("Justificativa do Cancelamento pelo Agente", "Justificativa do Cancelamento pelo Gestor")`,
+  agente: AGENTE_EXPR,
+  local: LOCAL_EXPR,
+  codigo: CODIGO_EXPR,
+  equipamento: EQUIPAMENTO_EXPR,
+  motivo_cancelamento: MOTIVO_CANCELAMENTO_EXPR,
 } as const
 
 function extractFilters(query: Record<string, unknown>): AutoInfracaoFilters {
@@ -224,16 +227,16 @@ autosInfracaoRouter.get("/api/autos-infracao", async (req, res) => {
   const pageSize = Math.min(100, Math.max(1, rawPageSize))
   const offset = (page - 1) * pageSize
 
-  const countResult = await pool.query(`SELECT COUNT(*) FROM ${VIEW} ${clause}`, params)
+  const countResult = await pool.query(`SELECT COUNT(*) FROM ${GOLD_STAR_FROM} ${clause}`, params)
   const total = Number(countResult.rows[0].count)
 
   const listResult = await pool.query(
     `SELECT
-       ROW_NUMBER() OVER (ORDER BY "Data e Hora" DESC NULLS LAST) AS id,
+       ROW_NUMBER() OVER (ORDER BY ai.data_hora DESC NULLS LAST) AS id,
        ${LIST_COLUMNS_SQL}
-     FROM ${VIEW}
+     FROM ${GOLD_STAR_FROM}
      ${clause}
-     ORDER BY "Data e Hora" DESC NULLS LAST
+     ORDER BY ai.data_hora DESC NULLS LAST
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, pageSize, offset]
   )
@@ -255,7 +258,7 @@ autosInfracaoRouter.get("/api/autos-infracao/groups", async (req, res) => {
 
   const result = await pool.query(
     `SELECT ${selectCols}, COUNT(*) AS total
-     FROM ${VIEW}
+     FROM ${GOLD_STAR_FROM}
      ${clause}
      GROUP BY ${groupCols}
      ORDER BY ${groupCols}`,
@@ -316,16 +319,16 @@ autosInfracaoRouter.get("/api/autos-infracao/group-rows", async (req, res) => {
   const pageSize = Math.min(100, Math.max(1, rawPageSize))
   const offset = (page - 1) * pageSize
 
-  const countResult = await pool.query(`SELECT COUNT(*) FROM ${VIEW} ${fullClause}`, params)
+  const countResult = await pool.query(`SELECT COUNT(*) FROM ${GOLD_STAR_FROM} ${fullClause}`, params)
   const total = Number(countResult.rows[0].count)
 
   const listResult = await pool.query(
     `SELECT
-       ROW_NUMBER() OVER (ORDER BY "Data e Hora" DESC NULLS LAST) AS id,
+       ROW_NUMBER() OVER (ORDER BY ai.data_hora DESC NULLS LAST) AS id,
        ${LIST_COLUMNS_SQL}
-     FROM ${VIEW}
+     FROM ${GOLD_STAR_FROM}
      ${fullClause}
-     ORDER BY "Data e Hora" DESC NULLS LAST
+     ORDER BY ai.data_hora DESC NULLS LAST
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, pageSize, offset]
   )
@@ -342,7 +345,7 @@ async function fetchExportRows(filters: AutoInfracaoFilters, groupBy: GroupKey[]
   const listResult = await pool.query(
     `SELECT
        ${LIST_COLUMNS_SQL}${extraSelectCols}
-     FROM ${VIEW}
+     FROM ${GOLD_STAR_FROM}
      ${clause}
      ORDER BY ${orderBy}`,
     params
@@ -520,7 +523,7 @@ autosInfracaoRouter.get("/api/autos-infracao/suggestions", async (req, res) => {
 
   const result = await pool.query(
     `SELECT DISTINCT ${column} AS value
-     FROM ${VIEW}
+     FROM ${GOLD_STAR_FROM}
      WHERE ${column} IS NOT NULL
        AND ${column} ILIKE $1
      ORDER BY value
@@ -550,11 +553,11 @@ autosInfracaoRouter.get("/api/autos-infracao/stats", async (req, res) => {
   const periodoData = typeof req.query.periodo_data === "string" ? req.query.periodo_data : undefined
 
   const cancelamentoClause = clause
-    ? `${clause} AND ("Justificativa do Cancelamento pelo Agente" IS NOT NULL OR "Justificativa do Cancelamento pelo Gestor" IS NOT NULL)`
-    : `WHERE "Justificativa do Cancelamento pelo Agente" IS NOT NULL OR "Justificativa do Cancelamento pelo Gestor" IS NOT NULL`
+    ? `${clause} AND (${MOTIVO_CANCELAMENTO_EXPR} IS NOT NULL)`
+    : `WHERE ${MOTIVO_CANCELAMENTO_EXPR} IS NOT NULL`
 
   const granularity = resolveGranularity(periodoData, filters.data_inicio, filters.data_fim)
-  const bucketExpr = bucketSqlExpression(granularity)
+  const bucketExpr = bucketSqlExpression(granularity, DATA_HORA_EXPR)
 
   const anteriorFilters = {
     ...filters,
@@ -575,12 +578,12 @@ autosInfracaoRouter.get("/api/autos-infracao/stats", async (req, res) => {
     mesAtualResult,
     mesAnteriorResult,
   ] = await Promise.all([
-    pool.query(`SELECT COUNT(*) FROM ${VIEW} ${clause}`, params),
+    pool.query(`SELECT COUNT(*) FROM ${GOLD_STAR_FROM} ${clause}`, params),
     pool.query(
       `SELECT
-       "Nome do Agente" AS agente,
+       ${AGENTE_EXPR} AS agente,
        COUNT(*) AS total
-     FROM ${VIEW}
+     FROM ${GOLD_STAR_FROM}
      ${clause}
      GROUP BY agente
      ORDER BY total DESC
@@ -589,34 +592,34 @@ autosInfracaoRouter.get("/api/autos-infracao/stats", async (req, res) => {
     ),
     pool.query(
       `SELECT
-       COALESCE("Justificativa do Cancelamento pelo Agente", "Justificativa do Cancelamento pelo Gestor") AS motivo_cancelamento,
+       ${MOTIVO_CANCELAMENTO_EXPR} AS motivo_cancelamento,
        COUNT(*) AS total
-     FROM ${VIEW}
+     FROM ${GOLD_STAR_FROM}
      ${cancelamentoClause}
      GROUP BY motivo_cancelamento
      ORDER BY total DESC`,
       params
     ),
-    pool.query(`SELECT COUNT(DISTINCT "Nome do Agente") FROM ${VIEW} ${clause}`, params),
-    pool.query(`SELECT COUNT(DISTINCT "Equipamento") FROM ${VIEW} ${clause}`, params),
+    pool.query(`SELECT COUNT(DISTINCT ${AGENTE_EXPR}) FROM ${GOLD_STAR_FROM} ${clause}`, params),
+    pool.query(`SELECT COUNT(DISTINCT ${EQUIPAMENTO_EXPR}) FROM ${GOLD_STAR_FROM} ${clause}`, params),
     pool.query(
-      `SELECT ${bucketExpr} AS bucket, COUNT(*) AS total FROM ${VIEW} ${clause} GROUP BY bucket`,
+      `SELECT ${bucketExpr} AS bucket, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${clause} GROUP BY bucket`,
       params
     ),
     pool.query(
-      `SELECT "Tipo Infração" AS tipo, COUNT(*) AS total FROM ${VIEW} ${clause} GROUP BY tipo ORDER BY total DESC`,
+      `SELECT ${TIPO_EXPR} AS tipo, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${clause} GROUP BY tipo ORDER BY total DESC`,
       params
     ),
     pool.query(
-      `SELECT "Competência" AS competencia, COUNT(*) AS total FROM ${VIEW} ${clause} GROUP BY competencia ORDER BY total DESC`,
+      `SELECT ${COMPETENCIA_EXPR} AS competencia, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${clause} GROUP BY competencia ORDER BY total DESC`,
       params
     ),
     pool.query(
-      `SELECT to_char("Data e Hora", 'YYYY-MM') AS ym, COUNT(*) AS total FROM ${VIEW} ${clause} GROUP BY ym`,
+      `SELECT to_char(ai.data_hora, 'YYYY-MM') AS ym, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${clause} GROUP BY ym`,
       params
     ),
     pool.query(
-      `SELECT to_char("Data e Hora", 'YYYY-MM') AS ym, COUNT(*) AS total FROM ${VIEW} ${anteriorClause} GROUP BY ym`,
+      `SELECT to_char(ai.data_hora, 'YYYY-MM') AS ym, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${anteriorClause} GROUP BY ym`,
       anteriorParams
     ),
   ])

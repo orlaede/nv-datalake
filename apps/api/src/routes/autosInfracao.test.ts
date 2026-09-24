@@ -2,7 +2,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import request from "supertest"
 import { createApp as buildApp } from "../server"
 import { pool } from "../db"
-import { AGENTE_EXPR, COMPETENCIA_EXPR, ORIGEM_EXPR } from "../queries/goldStarExpressions"
+import {
+  AGENTE_EXPR,
+  CODIGO_EXPR,
+  COMPETENCIA_EXPR,
+  EQUIPAMENTO_EXPR,
+  GOLD_STAR_FROM,
+  MOTIVO_CANCELAMENTO_EXPR,
+  ORIGEM_EXPR,
+  PERIODO_EXPR,
+  STATUS_EXPR,
+  TIPO_EXPR,
+} from "../queries/goldStarExpressions"
 
 vi.mock("../db", () => ({
   pool: { query: vi.fn() },
@@ -54,17 +65,16 @@ describe("GET /api/autos-infracao", () => {
 
     const [countCall, listCall] = vi.mocked(pool.query).mock.calls
     expect(countCall[0]).toContain(`WHERE ${AGENTE_EXPR} ILIKE $1`)
-    expect(listCall[0]).toContain(`"Código da Infração"::text AS codigo`)
-    expect(listCall[0]).toContain(`"Número do Auto"::text AS numero_auto`)
-    expect(listCall[0]).toContain(`"Equipamento" AS equipamento`)
-    expect(listCall[0]).toContain(`"Turno" AS periodo`)
-    expect(listCall[0]).toContain(`"Competência" AS competencia`)
-    expect(listCall[0]).toContain(
-      `COALESCE("Justificativa do Cancelamento pelo Agente", "Justificativa do Cancelamento pelo Gestor") AS motivo_cancelamento`
-    )
-    expect(listCall[0]).toContain(`"Status do Auto" AS status`)
-    expect(countCall[0]).toContain("FROM gold.fac_auto_infracao")
-    expect(listCall[0]).toContain("FROM gold.fac_auto_infracao")
+    expect(listCall[0]).toContain(`${CODIGO_EXPR} AS codigo`)
+    expect(listCall[0]).toContain(`ai.num_auto::text AS numero_auto`)
+    expect(listCall[0]).toContain(`${EQUIPAMENTO_EXPR} AS equipamento`)
+    expect(listCall[0]).toContain(`${PERIODO_EXPR} AS periodo`)
+    expect(listCall[0]).toContain(`${COMPETENCIA_EXPR} AS competencia`)
+    expect(listCall[0]).toContain(`${MOTIVO_CANCELAMENTO_EXPR} AS motivo_cancelamento`)
+    expect(listCall[0]).toContain(`${STATUS_EXPR} AS status`)
+    expect(countCall[0]).toContain(`FROM ${GOLD_STAR_FROM}`)
+    expect(listCall[0]).toContain(`FROM ${GOLD_STAR_FROM}`)
+    expect(listCall[0]).toContain("left join gold.dim_agente")
     expect(countCall[0]).not.toContain("ce_eusebio.vw_bi_auto_infracao")
     expect(listCall[0]).not.toContain("ce_eusebio.vw_bi_auto_infracao")
     expect(listCall[0]).toContain("LIMIT $2 OFFSET $3")
@@ -145,7 +155,7 @@ describe("GET /api/autos-infracao/stats", () => {
 
     const [countCall, agentCall, groupCall] = vi.mocked(pool.query).mock.calls
     expect(countCall[0]).toContain(`WHERE ${COMPETENCIA_EXPR} = $1`)
-    expect(agentCall[0]).toContain(`"Nome do Agente" AS agente`)
+    expect(agentCall[0]).toContain(`${AGENTE_EXPR} AS agente`)
     expect(agentCall[0]).toContain("LIMIT 10")
     expect(groupCall[0]).toContain("GROUP BY")
     expect(groupCall[0]).toContain(`${COMPETENCIA_EXPR} = $1 AND (`)
@@ -171,20 +181,17 @@ describe("GET /api/autos-infracao/suggestions", () => {
     expect(res.body.suggestions).toEqual(["Vanessa Cordeiro Celestino"])
 
     const [suggestionsCall] = vi.mocked(pool.query).mock.calls
-    expect(suggestionsCall[0]).toContain(`"Nome do Agente" AS value`)
+    expect(suggestionsCall[0]).toContain(`${AGENTE_EXPR} AS value`)
     expect(suggestionsCall[0]).toContain(`ILIKE $1`)
     expect(suggestionsCall[0]).toContain("LIMIT 10")
     expect(suggestionsCall[1]).toEqual(["%Van%"])
   })
 
   it.each([
-    ["agente", `"Nome do Agente" AS value`],
-    ["codigo", `"Código da Infração"::text AS value`],
-    ["equipamento", `"Equipamento" AS value`],
-    [
-      "motivo_cancelamento",
-      `COALESCE("Justificativa do Cancelamento pelo Agente", "Justificativa do Cancelamento pelo Gestor") AS value`,
-    ],
+    ["agente", `${AGENTE_EXPR} AS value`],
+    ["codigo", `${CODIGO_EXPR} AS value`],
+    ["equipamento", `${EQUIPAMENTO_EXPR} AS value`],
+    ["motivo_cancelamento", `${MOTIVO_CANCELAMENTO_EXPR} AS value`],
   ])("supports %s suggestions", async (field, selectExpression) => {
     vi.mocked(pool.query).mockResolvedValueOnce({ rows: [] } as never)
 
@@ -271,11 +278,11 @@ describe("GET /api/autos-infracao/stats — dashboard chart fields", () => {
     ])
 
     const calls = vi.mocked(pool.query).mock.calls
-    expect(calls[3][0]).toContain(`COUNT(DISTINCT "Nome do Agente")`)
-    expect(calls[4][0]).toContain(`COUNT(DISTINCT "Equipamento")`)
-    expect(calls[5][0]).toContain(`EXTRACT(ISODOW FROM "Data e Hora")`)
-    expect(calls[6][0]).toContain(`"Tipo Infração" AS tipo`)
-    expect(calls[7][0]).toContain(`"Competência" AS competencia`)
+    expect(calls[3][0]).toContain(`COUNT(DISTINCT ${AGENTE_EXPR})`)
+    expect(calls[4][0]).toContain(`COUNT(DISTINCT ${EQUIPAMENTO_EXPR})`)
+    expect(calls[5][0]).toContain(`EXTRACT(ISODOW FROM ai.data_hora)`)
+    expect(calls[6][0]).toContain(`${TIPO_EXPR} AS tipo`)
+    expect(calls[7][0]).toContain(`${COMPETENCIA_EXPR} AS competencia`)
   })
 })
 
