@@ -277,3 +277,25 @@ describe("GET /api/autos-infracao/stats — dashboard chart fields", () => {
     expect(calls[7][0]).toContain(`"Competência" AS competencia`)
   })
 })
+
+describe("GET /api/autos-infracao/origens", () => {
+  beforeEach(() => {
+    vi.mocked(pool.query).mockReset()
+  })
+
+  it("returns origin names ordered from gold.dim_origem", async () => {
+    vi.mocked(pool.query).mockResolvedValueOnce({
+      rows: [{ nome: "Caucaia (Amostra)" }, { nome: "Quixadá" }],
+    } as never)
+
+    const app = createApp()
+    const res = await request(app).get("/api/autos-infracao/origens")
+
+    expect(res.status).toBe(200)
+    expect(res.body.origens).toEqual(["Caucaia (Amostra)", "Quixadá"])
+
+    const [call] = vi.mocked(pool.query).mock.calls
+    expect(call[0]).toContain("FROM gold.dim_origem")
+    expect(call[0]).toContain("ORDER BY nome")
+  })
+})

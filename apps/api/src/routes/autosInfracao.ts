@@ -8,6 +8,11 @@ import { bucketSqlExpression, formatBucketKey, generateBuckets, resolveGranulari
 
 export const autosInfracaoRouter = Router()
 
+autosInfracaoRouter.get("/api/autos-infracao/origens", async (_req, res) => {
+  const result = await pool.query(`SELECT nome FROM gold.dim_origem ORDER BY nome`)
+  res.json({ origens: result.rows.map((row) => row.nome) })
+})
+
 const EXPORT_COLUMNS = [
   { key: "numero_auto", header: "Número do Auto" },
   { key: "data_hora", header: "Data/Hora" },
