@@ -9,6 +9,7 @@ export type AutoInfracaoFilters = {
   data_fim?: string
   competencia?: string
   motivo_cancelamento?: string
+  origem?: string
 }
 
 type ConditionBuilder = (paramIndex: number) => string
@@ -23,6 +24,7 @@ const CONDITION_BY_FILTER: Record<keyof AutoInfracaoFilters, ConditionBuilder> =
   data_inicio: (i) => `"Data e Hora" >= $${i}`,
   data_fim: (i) => `"Data e Hora" <= $${i}`,
   competencia: (i) => `"Competência" = $${i}`,
+  origem: (i) => `"Origem" = $${i}`,
   motivo_cancelamento: (i) =>
     `COALESCE("Justificativa do Cancelamento pelo Agente", "Justificativa do Cancelamento pelo Gestor") ILIKE $${i}`,
 }

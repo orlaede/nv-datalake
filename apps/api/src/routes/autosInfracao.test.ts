@@ -70,6 +70,21 @@ describe("GET /api/autos-infracao", () => {
     expect(listCall[1]).toEqual(["%Vanessa%", 20, 0])
   })
 
+  it("passes the origem filter through to the query", async () => {
+    vi.mocked(pool.query)
+      .mockResolvedValueOnce({ rows: [{ count: "0" }] } as never)
+      .mockResolvedValueOnce({ rows: [] } as never)
+
+    const app = createApp()
+    const res = await request(app).get("/api/autos-infracao").query({ origem: "Quixadá" })
+
+    expect(res.status).toBe(200)
+    const [countCall, listCall] = vi.mocked(pool.query).mock.calls
+    expect(countCall[0]).toContain(`WHERE "Origem" = $1`)
+    expect(listCall[0]).toContain(`WHERE "Origem" = $1`)
+    expect(listCall[1]).toEqual(["Quixadá", 20, 0])
+  })
+
   it("returns 400 when page is non-numeric", async () => {
     const app = createApp()
     const res = await request(app).get("/api/autos-infracao").query({ page: "abc" })

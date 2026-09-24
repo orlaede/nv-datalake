@@ -20,6 +20,12 @@ describe("buildAutoInfracaoWhere", () => {
     expect(params).toEqual(["Manhã"])
   })
 
+  it("builds an equality clause for origem", () => {
+    const { clause, params } = buildAutoInfracaoWhere({ origem: "Quixadá" })
+    expect(clause).toBe(`WHERE "Origem" = $1`)
+    expect(params).toEqual(["Quixadá"])
+  })
+
   it("casts codigo to text for comparison", () => {
     const { clause, params } = buildAutoInfracaoWhere({ codigo: "57380" })
     expect(clause).toBe(`WHERE "Código da Infração"::text = $1`)
