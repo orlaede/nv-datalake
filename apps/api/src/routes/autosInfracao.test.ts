@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import request from "supertest"
 import { createApp as buildApp } from "../server"
 import { pool } from "../db"
+import { AGENTE_EXPR, COMPETENCIA_EXPR, ORIGEM_EXPR } from "../queries/goldStarExpressions"
 
 vi.mock("../db", () => ({
   pool: { query: vi.fn() },
@@ -52,7 +53,7 @@ describe("GET /api/autos-infracao", () => {
     })
 
     const [countCall, listCall] = vi.mocked(pool.query).mock.calls
-    expect(countCall[0]).toContain(`WHERE "Nome do Agente" ILIKE $1`)
+    expect(countCall[0]).toContain(`WHERE ${AGENTE_EXPR} ILIKE $1`)
     expect(listCall[0]).toContain(`"Código da Infração"::text AS codigo`)
     expect(listCall[0]).toContain(`"Número do Auto"::text AS numero_auto`)
     expect(listCall[0]).toContain(`"Equipamento" AS equipamento`)
@@ -80,8 +81,8 @@ describe("GET /api/autos-infracao", () => {
 
     expect(res.status).toBe(200)
     const [countCall, listCall] = vi.mocked(pool.query).mock.calls
-    expect(countCall[0]).toContain(`WHERE "Origem" = $1`)
-    expect(listCall[0]).toContain(`WHERE "Origem" = $1`)
+    expect(countCall[0]).toContain(`WHERE ${ORIGEM_EXPR} = $1`)
+    expect(listCall[0]).toContain(`WHERE ${ORIGEM_EXPR} = $1`)
     expect(listCall[1]).toEqual(["Quixadá", 20, 0])
   })
 
@@ -143,11 +144,11 @@ describe("GET /api/autos-infracao/stats", () => {
     ])
 
     const [countCall, agentCall, groupCall] = vi.mocked(pool.query).mock.calls
-    expect(countCall[0]).toContain(`WHERE "Competência" = $1`)
+    expect(countCall[0]).toContain(`WHERE ${COMPETENCIA_EXPR} = $1`)
     expect(agentCall[0]).toContain(`"Nome do Agente" AS agente`)
     expect(agentCall[0]).toContain("LIMIT 10")
     expect(groupCall[0]).toContain("GROUP BY")
-    expect(groupCall[0]).toContain(`"Competência" = $1 AND (`)
+    expect(groupCall[0]).toContain(`${COMPETENCIA_EXPR} = $1 AND (`)
   })
 })
 

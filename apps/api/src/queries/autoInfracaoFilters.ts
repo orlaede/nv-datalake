@@ -1,3 +1,16 @@
+import {
+  AGENTE_EXPR,
+  CODIGO_EXPR,
+  COMPETENCIA_EXPR,
+  DATA_HORA_EXPR,
+  EQUIPAMENTO_EXPR,
+  LOCAL_EXPR,
+  MOTIVO_CANCELAMENTO_EXPR,
+  ORIGEM_EXPR,
+  PERIODO_EXPR,
+  TIPO_EXPR,
+} from "./goldStarExpressions"
+
 export type AutoInfracaoFilters = {
   agente?: string
   local?: string
@@ -15,18 +28,17 @@ export type AutoInfracaoFilters = {
 type ConditionBuilder = (paramIndex: number) => string
 
 const CONDITION_BY_FILTER: Record<keyof AutoInfracaoFilters, ConditionBuilder> = {
-  agente: (i) => `"Nome do Agente" ILIKE $${i}`,
-  local: (i) => `"Logradouro" ILIKE $${i}`,
-  tipo: (i) => `"Tipo Infração" = $${i}`,
-  codigo: (i) => `"Código da Infração"::text = $${i}`,
-  equipamento: (i) => `"Equipamento" ILIKE $${i}`,
-  periodo: (i) => `"Turno" = $${i}`,
-  data_inicio: (i) => `"Data e Hora" >= $${i}`,
-  data_fim: (i) => `"Data e Hora" <= $${i}`,
-  competencia: (i) => `"Competência" = $${i}`,
-  origem: (i) => `"Origem" = $${i}`,
-  motivo_cancelamento: (i) =>
-    `COALESCE("Justificativa do Cancelamento pelo Agente", "Justificativa do Cancelamento pelo Gestor") ILIKE $${i}`,
+  agente: (i) => `${AGENTE_EXPR} ILIKE $${i}`,
+  local: (i) => `${LOCAL_EXPR} ILIKE $${i}`,
+  tipo: (i) => `${TIPO_EXPR} = $${i}`,
+  codigo: (i) => `${CODIGO_EXPR} = $${i}`,
+  equipamento: (i) => `${EQUIPAMENTO_EXPR} ILIKE $${i}`,
+  periodo: (i) => `${PERIODO_EXPR} = $${i}`,
+  data_inicio: (i) => `${DATA_HORA_EXPR} >= $${i}`,
+  data_fim: (i) => `${DATA_HORA_EXPR} <= $${i}`,
+  competencia: (i) => `${COMPETENCIA_EXPR} = $${i}`,
+  motivo_cancelamento: (i) => `${MOTIVO_CANCELAMENTO_EXPR} ILIKE $${i}`,
+  origem: (i) => `${ORIGEM_EXPR} = $${i}`,
 }
 
 const LIKE_FILTERS: Partial<Record<keyof AutoInfracaoFilters, true>> = {
