@@ -156,6 +156,7 @@ describe("GET /api/autos-infracao/stats", () => {
     const [countCall, agentCall, groupCall] = vi.mocked(pool.query).mock.calls
     expect(countCall[0]).toContain(`WHERE ${COMPETENCIA_EXPR} = $1`)
     expect(agentCall[0]).toContain(`${AGENTE_EXPR} AS agente`)
+    expect(agentCall[0]).toContain(`GROUP BY ${AGENTE_EXPR}`)
     expect(agentCall[0]).toContain("LIMIT 10")
     expect(groupCall[0]).toContain("GROUP BY")
     expect(groupCall[0]).toContain(`GROUP BY ${MOTIVO_CANCELAMENTO_EXPR}`)
@@ -282,7 +283,9 @@ describe("GET /api/autos-infracao/stats — dashboard chart fields", () => {
     expect(calls[3][0]).toContain(`COUNT(DISTINCT ${AGENTE_EXPR})`)
     expect(calls[4][0]).toContain(`COUNT(DISTINCT ${EQUIPAMENTO_EXPR})`)
     expect(calls[5][0]).toContain(`EXTRACT(ISODOW FROM ai.data_hora)`)
+    expect(calls[5][0]).toContain(`GROUP BY EXTRACT(ISODOW FROM ai.data_hora)`)
     expect(calls[6][0]).toContain(`${TIPO_EXPR} AS tipo`)
+    expect(calls[6][0]).toContain(`GROUP BY ${TIPO_EXPR}`)
     expect(calls[7][0]).toContain(`${COMPETENCIA_EXPR} AS competencia`)
   })
 })

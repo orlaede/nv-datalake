@@ -585,7 +585,7 @@ autosInfracaoRouter.get("/api/autos-infracao/stats", async (req, res) => {
        COUNT(*) AS total
      FROM ${GOLD_STAR_FROM}
      ${clause}
-     GROUP BY agente
+     GROUP BY ${AGENTE_EXPR}
      ORDER BY total DESC
      LIMIT 10`,
       params
@@ -603,11 +603,11 @@ autosInfracaoRouter.get("/api/autos-infracao/stats", async (req, res) => {
     pool.query(`SELECT COUNT(DISTINCT ${AGENTE_EXPR}) FROM ${GOLD_STAR_FROM} ${clause}`, params),
     pool.query(`SELECT COUNT(DISTINCT ${EQUIPAMENTO_EXPR}) FROM ${GOLD_STAR_FROM} ${clause}`, params),
     pool.query(
-      `SELECT ${bucketExpr} AS bucket, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${clause} GROUP BY bucket`,
+      `SELECT ${bucketExpr} AS bucket, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${clause} GROUP BY ${bucketExpr}`,
       params
     ),
     pool.query(
-      `SELECT ${TIPO_EXPR} AS tipo, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${clause} GROUP BY tipo ORDER BY total DESC`,
+      `SELECT ${TIPO_EXPR} AS tipo, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${clause} GROUP BY ${TIPO_EXPR} ORDER BY total DESC`,
       params
     ),
     pool.query(
@@ -615,11 +615,11 @@ autosInfracaoRouter.get("/api/autos-infracao/stats", async (req, res) => {
       params
     ),
     pool.query(
-      `SELECT to_char(ai.data_hora, 'YYYY-MM') AS ym, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${clause} GROUP BY ym`,
+      `SELECT to_char(ai.data_hora, 'YYYY-MM') AS ym, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${clause} GROUP BY to_char(ai.data_hora, 'YYYY-MM')`,
       params
     ),
     pool.query(
-      `SELECT to_char(ai.data_hora, 'YYYY-MM') AS ym, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${anteriorClause} GROUP BY ym`,
+      `SELECT to_char(ai.data_hora, 'YYYY-MM') AS ym, COUNT(*) AS total FROM ${GOLD_STAR_FROM} ${anteriorClause} GROUP BY to_char(ai.data_hora, 'YYYY-MM')`,
       anteriorParams
     ),
   ])
