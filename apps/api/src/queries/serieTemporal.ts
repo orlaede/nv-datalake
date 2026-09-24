@@ -24,16 +24,19 @@ export function resolveGranularity(
   return "dia"
 }
 
-export function bucketSqlExpression(granularity: Granularity): string {
+export function bucketSqlExpression(
+  granularity: Granularity,
+  column: string = '"Data e Hora"'
+): string {
   switch (granularity) {
     case "hora":
-      return `EXTRACT(HOUR FROM "Data e Hora")`
+      return `EXTRACT(HOUR FROM ${column})`
     case "diaSemana":
-      return `EXTRACT(ISODOW FROM "Data e Hora")`
+      return `EXTRACT(ISODOW FROM ${column})`
     case "dia":
-      return `to_char("Data e Hora", 'YYYY-MM-DD')`
+      return `to_char(${column}, 'YYYY-MM-DD')`
     case "mes":
-      return `to_char("Data e Hora", 'YYYY-MM')`
+      return `to_char(${column}, 'YYYY-MM')`
   }
 }
 

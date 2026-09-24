@@ -43,6 +43,11 @@ describe("bucketSqlExpression", () => {
     expect(bucketSqlExpression("dia")).toBe(`to_char("Data e Hora", 'YYYY-MM-DD')`)
     expect(bucketSqlExpression("mes")).toBe(`to_char("Data e Hora", 'YYYY-MM')`)
   })
+
+  it("builds bucket expressions for a custom column", () => {
+    expect(bucketSqlExpression("mes", "ai.data_hora")).toBe(`to_char(ai.data_hora, 'YYYY-MM')`)
+    expect(bucketSqlExpression("hora", "ai.data_hora")).toBe(`EXTRACT(HOUR FROM ai.data_hora)`)
+  })
 })
 
 describe("formatBucketKey", () => {
