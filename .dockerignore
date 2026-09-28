@@ -8,3 +8,8 @@
 **/.serena
 .git
 .DS_Store
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+.worktrees

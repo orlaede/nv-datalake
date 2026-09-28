@@ -191,7 +191,7 @@ O projeto pode ser empacotado numa imagem única (Dagster + dbt embutido) pra ro
 
 - **[`Dockerfile`](Dockerfile)** — imagem baseada em `python:3.11-slim` + `uv`. Empacota `dagster/nvdatalake` (que já inclui `dbt-postgres`) junto com `dbt/nvdatalake` (os models), preservando a mesma estrutura relativa de pastas que o código espera. Roda `dbt parse` no build (gera `target/manifest.json` dentro da imagem — necessário porque em produção, via `dagster-webserver`, o Dagster não regenera esse manifest sozinho como faz em `dg dev`). Sobe `dagster-webserver` na porta `3000`.
 - **[`.dockerignore`](.dockerignore)** — evita copiar `.venv`, `target/`, `logs/`, `__pycache__` etc para o contexto do build.
-- **[`docker-compose.yml`](docker-compose.yml)** — dois serviços: `nvdatalake` (webserver, UI) e `nvdatalake-daemon` (`dagster-daemon run`, processa a fila de execução). **Sem o daemon, cliques de "Materialize" na UI não disparam o run.** Ambos compartilham o mesmo `DAGSTER_HOME` (volume `dagster_home`) e as mesmas env vars, via YAML anchor (`x-nvdatalake-env`).
+- **[`docker-compose.yml`](docker-compose.yml)** — quatro serviços: `api` (Node.js), `web` (Nginx com o React compilado), `nvdatalake` (webserver, UI) e `nvdatalake-daemon` (`dagster-daemon run`, processa a fila de execução). **Sem o daemon, cliques de "Materialize" na UI não disparam o run.** Os dois serviços Dagster compartilham o mesmo `DAGSTER_HOME` (volume `dagster_home`) e as mesmas env vars, via YAML anchor (`x-nvdatalake-env`).
 
 Os bancos PostgreSQL (origem e destino) **não** são containerizados aqui — são instâncias externas já existentes, acessadas via variáveis de ambiente (ver seção [Destination database](dagster/nvdatalake/README.md#destination-database) e [Multi-source strategy](dagster/nvdatalake/README.md#multi-source-strategy)).
 
@@ -218,6 +218,12 @@ docker run --rm -w /app/dagster/nvdatalake nvdatalake:latest \
 
 ### Rodar com docker compose
 
+O Compose também compila e inicia a API e o web usando
+[`apps/api/Dockerfile`](apps/api/Dockerfile) e
+[`apps/web/Dockerfile`](apps/web/Dockerfile). O web encaminha `/api/` para a API
+pela rede interna do Docker; `VITE_API_URL` fica vazio no build. O Nginx também
+suporta acesso direto às rotas do React, como `/admin/usuarios`.
+
 Credenciais não ficam mais no `docker-compose.yml` — ele lê via `${VAR}` de um `.env` na raiz.
 Copia [`.env.example`](.env.example) pra `.env` e preenche com os valores reais (hosts, usuário,
 senha, nome de cada banco). `.env` é gitignored, nunca commitar credenciais nele. Cada origem
@@ -229,9 +235,36 @@ prefixo, ver [Adding a new source](dagster/nvdatalake/README.md#adding-a-new-sou
 docker compose up -d --build
 ```
 
-Acesse o painel do Dagster em **http://localhost:3000**. Confere que os dois serviços subiram:
+No `.env` da raiz, configure `AUTH_JWT_SECRET` com um segredo aleatório de pelo
+menos 32 caracteres. Os arquivos `.env` em `apps/` não são usados pelo Compose.
+Para uso local, mantenha `AUTH_COOKIE_SECURE=false` e configure
+`AUTH_ALLOWED_ORIGIN=http://localhost,http://127.0.0.1`.
+Em produção com HTTPS, use `AUTH_COOKIE_SECURE=true` e a origem pública do web.
+As migrações e a criação do administrador seguem os passos de **Controle de acesso**;
+o Compose não as executa automaticamente.
+
+Os bancos continuam externos. Se estiverem na máquina que executa o Docker
+Desktop, use `host.docker.internal` nas variáveis de host; `localhost` dentro
+de um contêiner aponta para o próprio contêiner.
+
+Endereços padrão:
+
+- Web: **http://localhost** (Nginx na porta 80; `WEB_PORT` no `.env`).
+- API: **http://localhost:3001/health** (`API_PORT` no `.env`).
+- Dagster: **http://localhost:3000**.
+
+Ao alterar `WEB_PORT`, ajuste também `AUTH_ALLOWED_ORIGIN`. O web aguarda o
+healthcheck HTTP da API; esse check não verifica o banco de dados.
+Para iniciar somente a API e o web:
 
 ```bash
+docker compose up -d --build api web
+```
+
+Confira os serviços:
+
+```bash
+docker compose ps
 docker compose logs --tail=30
 ```
 

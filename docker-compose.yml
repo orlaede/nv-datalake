@@ -18,6 +18,42 @@ x-nvdatalake-env: &nvdatalake-env
   DATALAKE_DB_NAME: ${DATALAKE_DB_NAME}
 
 services:
+  api:
+    build: ./apps/api
+    ports:
+      - "${API_PORT:-3001}:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATALAKE_DB_HOST: ${DATALAKE_DB_HOST}
+      DATALAKE_DB_PORT: ${DATALAKE_DB_PORT}
+      DATALAKE_DB_USER: ${DATALAKE_DB_USER}
+      DATALAKE_DB_PASSWORD: ${DATALAKE_DB_PASSWORD}
+      DATALAKE_DB_NAME: ${DATALAKE_DB_NAME}
+      PGSSLMODE: ${PGSSLMODE:-require}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?Set AUTH_JWT_SECRET in .env (at least 32 characters)}
+      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-nv-datalake-api}
+      AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-nv-datalake-web}
+      AUTH_ACCESS_TOKEN_TTL: ${AUTH_ACCESS_TOKEN_TTL:-15m}
+      AUTH_REFRESH_TOKEN_TTL_DAYS: ${AUTH_REFRESH_TOKEN_TTL_DAYS:-30}
+      AUTH_REFRESH_COOKIE_NAME: ${AUTH_REFRESH_COOKIE_NAME:-nv_refresh}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      AUTH_ALLOWED_ORIGIN: ${AUTH_ALLOWED_ORIGIN:-http://localhost,http://127.0.0.1}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build: ./apps/web
+    ports:
+      - "${WEB_PORT:-80}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
   nvdatalake:
     build: .
     image: nvdatalake:latest
