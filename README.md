@@ -238,7 +238,7 @@ docker compose up -d --build
 No `.env` da raiz, configure `AUTH_JWT_SECRET` com um segredo aleatório de pelo
 menos 32 caracteres. Os arquivos `.env` em `apps/` não são usados pelo Compose.
 Para uso local, mantenha `AUTH_COOKIE_SECURE=false` e configure
-`AUTH_ALLOWED_ORIGIN=http://localhost,http://127.0.0.1`.
+`AUTH_ALLOWED_ORIGIN=http://localhost:8080,http://127.0.0.1:8080`.
 Em produção com HTTPS, use `AUTH_COOKIE_SECURE=true` e a origem pública do web.
 As migrações e a criação do administrador seguem os passos de **Controle de acesso**;
 o Compose não as executa automaticamente.
@@ -249,7 +249,7 @@ de um contêiner aponta para o próprio contêiner.
 
 Endereços padrão:
 
-- Web: **http://localhost** (Nginx na porta 80; `WEB_PORT` no `.env`).
+- Web: **http://localhost:8080** (porta externa 8080; Nginx na porta interna 80; `WEB_PORT` no `.env`).
 - API: **http://localhost:3001/health** (`API_PORT` no `.env`).
 - Dagster: **http://localhost:3000**.
 
