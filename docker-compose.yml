@@ -58,7 +58,7 @@ services:
     build: .
     image: nvdatalake:latest
     ports:
-      - "3000:3000"
+      - "${DAGSTER_PORT:-3002}:3000"
     environment:
       <<: *nvdatalake-env
       DAGSTER_HOME: /app/dagster_home
