@@ -57,8 +57,6 @@ services:
   nvdatalake:
     build: .
     image: nvdatalake:latest
-    ports:
-      - "${DAGSTER_PORT:-3002}:3000"
     environment:
       <<: *nvdatalake-env
       DAGSTER_HOME: /app/dagster_home
@@ -76,5 +74,25 @@ services:
     volumes:
       - dagster_home:/app/dagster_home
 
+  # Gateway TLS. Único serviço com porta publicada: web em HTTPS, Dagster em HTTPS
+  # com basic-auth. Api, web e nvdatalake ficam apenas na rede interna do Compose.
+  gateway:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "${TLS_PORT:-8443}:${TLS_PORT:-8443}"
+      - "${DAGSTER_TLS_PORT:-8444}:${DAGSTER_TLS_PORT:-8444}"
+    environment:
+      TLS_PORT: ${TLS_PORT:-8443}
+      DAGSTER_TLS_PORT: ${DAGSTER_TLS_PORT:-8444}
+    volumes:
+      - ./apps/gateway/Caddyfile:/etc/caddy/Caddyfile:ro
+      # gitignored; ver apps/gateway/auth.caddy.example
+      - ./apps/gateway/auth.caddy:/etc/caddy/auth.caddy:ro
+      - caddy_data:/data
+
 volumes:
   dagster_home:
+  caddy_data:

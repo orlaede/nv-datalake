@@ -6,6 +6,9 @@
 .env.*
 !.env.example
 
+# Basic-auth credential do gateway TLS (hash bcrypt). Ver auth.caddy.example
+apps/gateway/auth.caddy
+
 # dg CLI local cache
 .dg/
 

@@ -1,0 +1,43 @@
+# Gateway TLS. Termina HTTPS com certificado self-signed (autoridade interna do
+# Caddy) e encaminha para os serviços internos do Compose.
+#
+# `tls internal` nao usa ACME/Let's Encrypt de proposito: o host remoto e uma
+# instancia EC2, cujo nome (ec2-*.compute.amazonaws.com) e gerenciado pela AWS,
+# nao por nos. Para acesso publico de verdade, aponte um dominio proprio para o
+# IP da instancia e troque `tls internal` por `tls <dominio>` (renovacao
+# automatica pelo Caddy).
+#
+# O certificado e materializado em /data (volume `caddy_data`), preservado entre
+# recreates. `admin off` mantem a API de administracao fechada (nao e publicada);
+# para extrair a CA, leia o arquivo direto no volume:
+#   docker compose exec gateway cat /data/caddy/pki/authorities/local/root.crt
+{
+	# Nao tenta obter certificado para o hostname da instancia.
+	auto_https off
+	admin off
+}
+
+:{$TLS_PORT} {
+	tls internal
+
+	# O web (nginx) serve o SPA e ja encaminha /api/ para a API na rede interna.
+	reverse_proxy web:8080
+}
+
+:{$DAGSTER_TLS_PORT} {
+	tls internal
+
+	# A UI do Dagster nao tem autenticacao propria e permite disparar runs.
+	# Basic-auth obrigatorio: sem credencial valida o proxy responde 401.
+	# As credenciais vem de /etc/caddy/auth.caddy (gitignored) em vez de env var:
+	# um hash bcrypt tem "$" em cada campo e o Compose interpolar "$VAR" no valor,
+	# corrompendo o hash silenciosamente.
+	basic_auth {
+		import /etc/caddy/auth.caddy
+	}
+
+	# Websocket do live-reload e SSE dos eventos exigem upgrade e buffering off.
+	reverse_proxy nvdatalake:3000 {
+		flush_interval -1
+	}
+}

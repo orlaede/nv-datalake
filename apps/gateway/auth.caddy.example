@@ -1,0 +1,14 @@
+# Credencial do basic-auth do gateway TLS (UI do Dagster).
+#
+# Copie este arquivo para `auth.caddy` (gitignored) e troque a linha abaixo:
+#
+#   cp apps/gateway/auth.caddy.example apps/gateway/auth.caddy
+#
+# Gere o hash bcrypt com:
+#   docker run --rm caddy:2 caddy hash-password --plaintext 'sua-senha'
+#
+# Formato: <usuario> <bcrypt-hash>
+# Vem por arquivo, e nao por env var, porque o Compose interpola "$VAR" e o
+# hash bcrypt tem "$" em todos os campos ($2a$14$<salt><hash>) — o valor
+# chegaria corrompido no container, sem erro visivel.
+dagster SUBSTITUA_PELO_HASH_BCRYPT

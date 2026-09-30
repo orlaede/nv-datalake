@@ -191,7 +191,7 @@ O projeto pode ser empacotado numa imagem única (Dagster + dbt embutido) pra ro
 
 - **[`Dockerfile`](Dockerfile)** — imagem baseada em `python:3.11-slim` + `uv`. Empacota `dagster/nvdatalake` (que já inclui `dbt-postgres`) junto com `dbt/nvdatalake` (os models), preservando a mesma estrutura relativa de pastas que o código espera. Roda `dbt parse` no build (gera `target/manifest.json` dentro da imagem — necessário porque em produção, via `dagster-webserver`, o Dagster não regenera esse manifest sozinho como faz em `dg dev`). Sobe `dagster-webserver` na porta `3000`.
 - **[`.dockerignore`](.dockerignore)** — evita copiar `.venv`, `target/`, `logs/`, `__pycache__` etc para o contexto do build.
-- **[`docker-compose.yml`](docker-compose.yml)** — quatro serviços: `api` (Node.js), `web` (Nginx com o React compilado), `nvdatalake` (webserver, UI) e `nvdatalake-daemon` (`dagster-daemon run`, processa a fila de execução). **Sem o daemon, cliques de "Materialize" na UI não disparam o run.** Os dois serviços Dagster compartilham o mesmo `DAGSTER_HOME` (volume `dagster_home`) e as mesmas env vars, via YAML anchor (`x-nvdatalake-env`).
+- **[`docker-compose.yml`](docker-compose.yml)** — cinco serviços: `api` (Node.js), `web` (Nginx com o React compilado), `nvdatalake` (webserver, UI), `nvdatalake-daemon` (`dagster-daemon run`, processa a fila de execução) e `gateway` (Caddy, termina o TLS — ver [HTTPS com o gateway](#https-com-o-gateway-caddy)). **Sem o daemon, cliques de "Materialize" na UI não disparam o run.** Os dois serviços Dagster compartilham o mesmo `DAGSTER_HOME` (volume `dagster_home`) e as mesmas env vars, via YAML anchor (`x-nvdatalake-env`).
 
 Os bancos PostgreSQL (origem e destino) **não** são containerizados aqui — são instâncias externas já existentes, acessadas via variáveis de ambiente (ver seção [Destination database](dagster/nvdatalake/README.md#destination-database) e [Multi-source strategy](dagster/nvdatalake/README.md#multi-source-strategy)).
 
@@ -247,7 +247,7 @@ Os bancos continuam externos. Se estiverem na máquina que executa o Docker
 Desktop, use `host.docker.internal` nas variáveis de host; `localhost` dentro
 de um contêiner aponta para o próprio contêiner.
 
-Endereços padrão:
+Endereços padrão (portas internas, quando o gateway TLS não está no ar):
 
 - Web: **http://localhost:8080** (porta externa e interna 8080; Nginx em 8080; `WEB_PORT` no `.env`).
 - API: **http://localhost:3001/health** (`API_PORT` no `.env`).
@@ -266,6 +266,57 @@ Confira os serviços:
 ```bash
 docker compose ps
 docker compose logs --tail=30
+```
+
+#### HTTPS com o gateway (`caddy`)
+
+O serviço `gateway` (imagem [`caddy:2-alpine`](apps/gateway/Caddyfile)) é o
+único com porta publicada: ele termina o TLS e encaminha para `web` e para o
+`nvdatalake`. `api`, `web` e `nvdatalake` ficam só na rede interna do Compose.
+
+O `dagster-webserver` **não serve HTTPS** — a CLI não tem
+`--ssl-certificate`/`--ssl-keyfile`, e o próprio Dagster recomenda proxy na
+frente. Por isso o TLS termina no gateway, não no container do Dagster.
+
+Antes de subir, gere a credencial do basic-auth (o `.env` não a guarda, porque
+o Compose interpolar `"$VAR"` corromperia o hash bcrypt):
+
+```bash
+cp apps/gateway/auth.caddy.example apps/gateway/auth.caddy
+docker run --rm caddy:2 caddy hash-password --plaintext 'sua-senha'
+# cole "<usuario> <hash>" no apps/gateway/auth.caddy
+```
+
+```bash
+docker compose up -d --build
+```
+
+- Web: **https://<host>:8443** (`TLS_PORT` no `.env`)
+- Dagster: **https://<host>:8444** (`DAGSTER_TLS_PORT` no `.env`), com basic-auth
+
+O certificado é self-signed, emitido pela autoridade interna do Caddy e
+persistido no volume `caddy_data`. O navegador vai avisar até você instalar a
+CA no cliente:
+
+```bash
+docker compose exec gateway cat /data/caddy/pki/authorities/local/root.crt > cert.pem
+```
+
+Instale `cert.pem` como raiz confiável (macOS: Keychain, *Sistema* →
+*Confie sempre*; Linux: `/usr/local/share/ca-certificates/` + `update-ca-certificates`).
+
+A UI do Dagster **não tem autenticação própria** e permite disparar runs — por
+isso o basic-auth é obrigatório, não opcional. Para produção de verdade,
+aponte um domínio próprio para o IP da instância e troque `tls internal` por
+`tls <dominio>` no [`apps/gateway/Caddyfile`](apps/gateway/Caddyfile): o Caddy
+passa a emitir e renovar via Let's Encrypt, e o aviso do navegador some.
+
+Com o gateway ativo, use `AUTH_COOKIE_SECURE=true` e a origem HTTPS em
+`AUTH_ALLOWED_ORIGIN` (`https://<host>:8443`). O `dagster` também deixou de
+publicar porta direta — para acesso pontual sem abrir nada na internet:
+
+```bash
+docker compose port gateway 8444   # ou ssh -L 8444:localhost:8444 <host>
 ```
 
 ### Rodar com docker run (sem compose)
