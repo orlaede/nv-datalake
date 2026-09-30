@@ -249,7 +249,7 @@ de um contêiner aponta para o próprio contêiner.
 
 Endereços padrão:
 
-- Web: **http://localhost:8080** (porta externa 8080; Nginx na porta interna 80; `WEB_PORT` no `.env`).
+- Web: **http://localhost:8080** (porta externa e interna 8080; Nginx em 8080; `WEB_PORT` no `.env`).
 - API: **http://localhost:3001/health** (`API_PORT` no `.env`).
 - Dagster: **http://localhost:3000**.
 
