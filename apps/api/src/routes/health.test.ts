@@ -21,3 +21,24 @@ describe("GET /health", () => {
     expect(res.headers["access-control-allow-origin"]).toBe("http://127.0.0.1:5173")
   })
 })
+
+describe("erros sempre em JSON", () => {
+  it("responde JSON quando a origem não é permitida", async () => {
+    const res = await request(createApp())
+      .post("/api/auth/login")
+      .set("Origin", "http://origem-bloqueada.test")
+      .send({ email: "user@example.com", password: "secret" })
+
+    expect(res.status).toBe(500)
+    expect(res.headers["content-type"]).toMatch(/application\/json/)
+    expect(res.body.error).toEqual(expect.any(String))
+  })
+
+  it("responde JSON em rota de API inexistente", async () => {
+    const res = await request(createApp()).get("/api/rota-inexistente")
+
+    expect(res.status).toBe(404)
+    expect(res.headers["content-type"]).toMatch(/application\/json/)
+    expect(res.body.error).toEqual(expect.any(String))
+  })
+})

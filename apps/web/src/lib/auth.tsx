@@ -50,8 +50,9 @@ export function AuthProvider({ children, initialSession }: { children: ReactNode
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     })
-    const body = await response.json() as AuthSession & { error?: string }
-    if (!response.ok) throw new Error(body.error ?? "Não foi possível entrar")
+    const body = await response.json().catch(() => null) as (AuthSession & { error?: string }) | null
+    if (!response.ok) throw new Error(body?.error ?? `Falha ao entrar (HTTP ${response.status})`)
+    if (!body?.accessToken || !body?.user) throw new Error("Resposta de login inválida")
     setAuthSession(body)
     setSession(body)
   }, [])

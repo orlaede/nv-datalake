@@ -1,4 +1,4 @@
-import express from "express"
+import express, { type NextFunction, type Request, type Response } from "express"
 import cors from "cors"
 import { getAuthConfig } from "./auth/config"
 import { authenticateJwt, requirePermission } from "./auth/middleware"
@@ -28,6 +28,17 @@ export function createApp(options: { disableAuth?: boolean } = {}) {
     app.use("/api/autos-infracao", authenticateJwt, requirePermission("autos.read"))
   }
   app.use(autosInfracaoRouter)
+  app.use("/api", (_req, res) => {
+    res.status(404).json({ error: "Rota não encontrada" })
+  })
+  app.use((error: Error, _req: Request, res: Response, next: NextFunction) => {
+    if (res.headersSent) {
+      next(error)
+      return
+    }
+    console.error(error)
+    res.status(500).json({ error: "Erro interno do servidor" })
+  })
   return app
 }
 

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { useState } from "react"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { AuthProvider, PermissionGate, ProtectedRoute, useAuth, type AuthSession } from "./auth"
@@ -16,10 +17,12 @@ const session: AuthSession = { accessToken: "access-token", user }
 
 function AuthProbe() {
   const { user: currentUser, login } = useAuth()
+  const [error, setError] = useState<string | null>(null)
   return (
     <>
       <span>{currentUser?.email ?? "sem sessão"}</span>
-      <button type="button" onClick={() => void login("user@example.com", "secret")}>Entrar</button>
+      <span>{error ?? "sem erro"}</span>
+      <button type="button" onClick={() => void login("user@example.com", "secret").catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)))}>Entrar</button>
     </>
   )
 }
@@ -72,6 +75,29 @@ describe("web auth client", () => {
     expect(fetchMock).toHaveBeenCalledTimes(4)
     expect(fetchMock.mock.calls[2][1]).toEqual(expect.objectContaining({ method: "POST" }))
     expect(new Headers(fetchMock.mock.calls[3][1]?.headers).get("Authorization")).toBe("Bearer rotated-token")
+  })
+
+  it("mostra erro legível quando a resposta não é JSON", async () => {
+    const htmlResponse = {
+      ok: false,
+      status: 500,
+      json: async () => {
+        throw new SyntaxError('Unexpected token \'<\', "<!DOCTYPE "... is not valid JSON')
+      },
+      text: async () => "<!DOCTYPE html><html lang=\"en\"><title>Error</title>",
+    }
+    const fetchMock = vi.fn().mockResolvedValue(htmlResponse)
+    vi.stubGlobal("fetch", fetchMock)
+
+    render(
+      <AuthProvider initialSession={null}>
+        <AuthProbe />
+      </AuthProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }))
+    const message = await screen.findByText(/Falha ao entrar/)
+    expect(message).toHaveTextContent("500")
   })
 
   it("redirects unauthenticated users and hides unavailable permissions", async () => {
