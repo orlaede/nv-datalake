@@ -24,7 +24,9 @@ nos modelos, código ou fluxo para reconstruir a imagem e atualizar a definiçã
 
 Acesse **http://localhost:8082** e entre com `KESTRA_API_USER` e
 `KESTRA_API_PASSWORD`. No namespace `nvdatalake`, execute `materialize_all`.
-Para acesso a um servidor remoto, use túnel SSH:
+Para acesso remoto direto, use **http://<host>:8082** e libere TCP `8082`
+para seu IP no firewall/Security Group. A porta é publicada em todas as
+interfaces. Como alternativa, use túnel SSH:
 
 ```bash
 ssh -L 8082:127.0.0.1:8082 usuario@servidor

@@ -194,13 +194,13 @@ Endereços padrão:
 
 - Web: **http://localhost:8080** (`WEB_PORT`).
 - API: **http://localhost:3001/health** (`API_PORT`).
-- Kestra: **http://localhost:8082** (`KESTRA_PORT`, somente loopback).
+- Kestra: **http://localhost:8082** ou **http://<host>:8082** (`KESTRA_PORT`).
 
 O Compose serve somente HTTP, sem gateway HTTPS. Para acesso remoto ao web,
 use `http://<host>:8080` e inclua essa origem em `AUTH_ALLOWED_ORIGIN` no `.env`,
 por exemplo `http://localhost:8080,http://<host>:8080`. Se alterar `WEB_PORT`,
-ajuste também as origens. O Kestra permanece em loopback; para acesso remoto,
-use o túnel SSH documentado em [kestra/README.md](kestra/README.md).
+ajuste também as origens. A porta do Kestra é publicada em todas as interfaces;
+para acesso remoto, libere TCP `8082` para seu IP no firewall/Security Group.
 
 Ao atualizar uma stack que tinha o gateway, remova seu contêiner órfão sem
 apagar os volumes:

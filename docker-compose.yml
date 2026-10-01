@@ -41,7 +41,7 @@ services:
     restart: unless-stopped
     command: ["server", "standalone"]
     ports:
-      - "127.0.0.1:${KESTRA_PORT:-8082}:8080"
+      - "${KESTRA_PORT:-8082}:8080"
     depends_on:
       kestra-postgres:
         condition: service_healthy
