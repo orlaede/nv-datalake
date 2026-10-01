@@ -23,6 +23,7 @@ O projeto adota a **Medallion Architecture** (Bronze, Silver e Gold), separando 
 
 ### Tecnologias Utilizadas
 - **[Dagster](https://dagster.io/)**: Orquestração do pipeline de dados (carga bronze e execução do dbt).
+- **[Kestra](https://kestra.io/)**: Alternativa para o pipeline completo de ingestão e dbt, com fluxo versionado, artefatos persistentes e testes de ponta a ponta. Veja [configuração e execução](kestra/README.md).
 - **[dbt (data build tool)](https://www.getdbt.com/)**: Transformações SQL, tratamentos de dados e modelagem dimensional nas camadas Bronze, Silver e Gold.
 - **[PostgreSQL](https://www.postgresql.org/)**: Banco de dados relacional para a origem (`nvtr`) e o Data Lake (`nvdatalake`).
 - **[uv](https://docs.astral.sh/uv/)**: Gerenciador de pacotes e ambientes virtuais Python.
@@ -180,6 +181,21 @@ Caso queira rodar apenas os modelos do dbt via linha de comando:
 cd dbt/nvdatalake
 dbt build --profiles-dir ~/.dbt
 ```
+
+### 4. Executar com Kestra (alternativa ao Dagster)
+
+Configure as conexões e `KESTRA_*` no `.env` da raiz, depois:
+
+```bash
+docker compose --profile kestra up -d --build kestra kestra-import
+```
+
+Acesse **http://localhost:8082**, faça login e execute
+`nvdatalake.materialize_all`. O fluxo contempla as 14 tabelas de origem, todos
+os 24 modelos dbt e seus testes. O cron diário começa desabilitado; escolha
+um orquestrador para o agendamento. Para verificar a integração completa em
+bancos isolados, execute `./scripts/test_kestra.sh`. Mais detalhes em
+[kestra/README.md](kestra/README.md).
 
 ---
 

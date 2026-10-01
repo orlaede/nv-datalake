@@ -2,14 +2,14 @@ with base as (
     -- codigo is the IBGE code: it's the same real-world city regardless of
     -- which source schema it came from, so dedupe by codigo instead of
     -- keying by (source_key, codigo) like the other dimensions.
-    select
-        min(source_key) as source_key,
+    select distinct on (codigo)
+        source_key,
         codigo,
         descricao,
         uf_id,
         version
     from {{ ref('stg_municipio') }}
-    group by codigo, descricao, uf_id, version
+    order by codigo, source_key
 )
 
 select

@@ -1,0 +1,2 @@
+CREATE DATABASE nvtr;
+CREATE DATABASE nvdatalake;
