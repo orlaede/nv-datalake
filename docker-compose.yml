@@ -117,7 +117,7 @@ services:
       AUTH_ACCESS_TOKEN_TTL: ${AUTH_ACCESS_TOKEN_TTL:-15m}
       AUTH_REFRESH_TOKEN_TTL_DAYS: ${AUTH_REFRESH_TOKEN_TTL_DAYS:-30}
       AUTH_REFRESH_COOKIE_NAME: ${AUTH_REFRESH_COOKIE_NAME:-nv_refresh}
-      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      AUTH_COOKIE_SECURE: "false"
       AUTH_ALLOWED_ORIGIN: ${AUTH_ALLOWED_ORIGIN:-http://localhost:8080,http://127.0.0.1:8080}
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
@@ -134,24 +134,6 @@ services:
       api:
         condition: service_healthy
 
-  # Gateway TLS para web e Kestra; autenticação do Kestra no próprio serviço.
-  gateway:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    depends_on:
-      - web
-      - kestra
-    ports:
-      - "${TLS_PORT:-8443}:${TLS_PORT:-8443}"
-      - "${KESTRA_TLS_PORT:-8444}:${KESTRA_TLS_PORT:-8444}"
-    environment:
-      TLS_PORT: ${TLS_PORT:-8443}
-      KESTRA_TLS_PORT: ${KESTRA_TLS_PORT:-8444}
-    volumes:
-      - ./apps/gateway/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-
 volumes:
   kestra_postgres:
   kestra_storage:
-  caddy_data:

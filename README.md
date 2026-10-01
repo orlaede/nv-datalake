@@ -99,9 +99,9 @@ proxy, deixe `VITE_API_URL` vazio para que o web use URLs relativas.
 
 A API usa autenticação própria por e-mail e senha, com senha armazenada em
 Argon2id. O access token JWT fica em memória no web e o refresh token é
-rotacionado em cookie `HttpOnly`. Em produção, configure um segredo JWT com no
-mínimo 32 caracteres, `AUTH_COOKIE_SECURE=true` e `AUTH_ALLOWED_ORIGIN` com a
-origem pública do web.
+rotacionado em cookie `HttpOnly`. Configure um segredo JWT com no mínimo 32
+caracteres e `AUTH_ALLOWED_ORIGIN` com a origem HTTP usada para acessar o web.
+O Compose fixa `AUTH_COOKIE_SECURE=false`, compatível com HTTP.
 
 Aplique as migrações no Data Lake, nesta ordem (elas são idempotentes):
 
@@ -167,8 +167,8 @@ bancos isolados, execute `./scripts/test_kestra.sh`. Mais detalhes em
 
 O Compose usa Kestra com dbt embutido na imagem definida em
 [`kestra/Dockerfile`](kestra/Dockerfile). Os serviços são `kestra`,
-`kestra-postgres` (metadados), `kestra-import` (importação do fluxo), `api`,
-`web` e `gateway`. O dbt é executado pelo Kestra, sem serviço separado.
+`kestra-postgres` (metadados), `kestra-import` (importação do fluxo), `api`
+e `web`. O dbt é executado pelo Kestra, sem serviço separado.
 Os bancos de origem e destino continuam externos.
 
 Configure [`.env.example`](.env.example) em `.env`, incluindo conexões,
@@ -195,19 +195,19 @@ Endereços padrão:
 - Web: **http://localhost:8080** (`WEB_PORT`).
 - API: **http://localhost:3001/health** (`API_PORT`).
 - Kestra: **http://localhost:8082** (`KESTRA_PORT`, somente loopback).
-- Web HTTPS: **https://<host>:8443** (`TLS_PORT`).
-- Kestra HTTPS: **https://<host>:8444** (`KESTRA_TLS_PORT`), com login do Kestra.
 
-O gateway Caddy usa `tls internal` e persiste sua autoridade no volume
-`caddy_data`. Para confiar no certificado, extraia a CA e instale-a no cliente:
+O Compose serve somente HTTP, sem gateway HTTPS. Para acesso remoto ao web,
+use `http://<host>:8080` e inclua essa origem em `AUTH_ALLOWED_ORIGIN` no `.env`,
+por exemplo `http://localhost:8080,http://<host>:8080`. Se alterar `WEB_PORT`,
+ajuste também as origens. O Kestra permanece em loopback; para acesso remoto,
+use o túnel SSH documentado em [kestra/README.md](kestra/README.md).
+
+Ao atualizar uma stack que tinha o gateway, remova seu contêiner órfão sem
+apagar os volumes:
 
 ```bash
-docker compose exec gateway cat /data/caddy/pki/authorities/local/root.crt > cert.pem
+docker compose up -d --build --remove-orphans
 ```
-
-Em produção, configure `AUTH_COOKIE_SECURE=true` e a origem HTTPS em
-`AUTH_ALLOWED_ORIGIN`. Para certificado público, configure um domínio próprio
-no [`apps/gateway/Caddyfile`](apps/gateway/Caddyfile).
 
 ```bash
 docker compose ps -a
