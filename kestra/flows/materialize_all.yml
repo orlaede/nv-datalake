@@ -1,0 +1,62 @@
+id: materialize_all
+namespace: nvdatalake
+description: Todas as origens Bronze e todo o projeto dbt Bronze/Silver/Gold.
+
+inputs:
+  - id: full_refresh
+    type: BOOL
+    defaults: false
+
+concurrency:
+  limit: 1
+  behavior: QUEUE
+
+tasks:
+  - id: pipeline
+    type: io.kestra.plugin.core.flow.WorkingDirectory
+    tasks:
+      - id: ingest_bronze
+        type: io.kestra.plugin.scripts.shell.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        commands:
+          - python /opt/nvdatalake/kestra/ingest.py
+        outputFiles:
+          - ingestion.json
+
+      - id: prepare_dbt
+        type: io.kestra.plugin.scripts.shell.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        commands:
+          - cp -R /opt/nvdatalake/dbt/nvdatalake ./nvdatalake
+          - dbt deps --project-dir nvdatalake --profiles-dir nvdatalake
+          - dbt debug --project-dir nvdatalake --profiles-dir nvdatalake
+
+      - id: build_dbt
+        type: io.kestra.plugin.dbt.cli.DbtCLI
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        projectDir: nvdatalake
+        commands:
+          - "dbt build --project-dir nvdatalake --profiles-dir nvdatalake {{ inputs.full_refresh ? '--full-refresh' : '' }}"
+        outputFiles:
+          - nvdatalake/target/manifest.json
+          - nvdatalake/target/run_results.json
+
+      - id: docs_dbt
+        type: io.kestra.plugin.scripts.shell.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        commands:
+          - dbt docs generate --project-dir nvdatalake --profiles-dir nvdatalake
+        outputFiles:
+          - nvdatalake/target/catalog.json
+          - nvdatalake/target/index.html
+
+triggers:
+  - id: daily
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 3 * * *"
+    timezone: America/Sao_Paulo
+    disabled: true

@@ -11,7 +11,7 @@ O projeto adota a **Medallion Architecture** (Bronze, Silver e Gold), separando 
 ```text
               [ Banco Origem: nvtr (schemas ce_caucaia_amostra, ce_quixada, ...) ]
                                             │
-                                            ▼ (Dagster EL / SQLAlchemy)
+                                            ▼ (Kestra EL / SQLAlchemy)
                           [ Data Lake: nvdatalake (schema bronze) ]
                                             │
                                             ▼ (dbt Models)
@@ -22,7 +22,7 @@ O projeto adota a **Medallion Architecture** (Bronze, Silver e Gold), separando 
 ```
 
 ### Tecnologias Utilizadas
-- **[Dagster](https://dagster.io/)**: Orquestração do pipeline de dados (carga bronze e execução do dbt).
+- **[Kestra](https://kestra.io/)**: Orquestrador do pipeline completo de ingestão e dbt, com fluxo versionado, artefatos persistentes e testes de ponta a ponta. Veja [configuração e execução](kestra/README.md).
 - **[dbt (data build tool)](https://www.getdbt.com/)**: Transformações SQL, tratamentos de dados e modelagem dimensional nas camadas Bronze, Silver e Gold.
 - **[PostgreSQL](https://www.postgresql.org/)**: Banco de dados relacional para a origem (`nvtr`) e o Data Lake (`nvdatalake`).
 - **[uv](https://docs.astral.sh/uv/)**: Gerenciador de pacotes e ambientes virtuais Python.
@@ -39,7 +39,7 @@ nv-datalake/
 │   ├── api/                    # API HTTP (Express) para consultas e exportações
 │   └── web/                    # Aplicação web (React + Vite) para dashboards e listagens
 ├── dagster/
-│   └── nvdatalake/             # Projeto Dagster (Orquestração e Ingestão Bronze)
+│   └── nvdatalake/             # Código legado e ambiente Python de ingestão
 │       ├── src/nvdatalake/
 │       │   ├── definitions.py  # Definição principal do Dagster (Assets & Recursos)
 │       │   └── defs/
@@ -99,9 +99,9 @@ proxy, deixe `VITE_API_URL` vazio para que o web use URLs relativas.
 
 A API usa autenticação própria por e-mail e senha, com senha armazenada em
 Argon2id. O access token JWT fica em memória no web e o refresh token é
-rotacionado em cookie `HttpOnly`. Em produção, configure um segredo JWT com no
-mínimo 32 caracteres, `AUTH_COOKIE_SECURE=true` e `AUTH_ALLOWED_ORIGIN` com a
-origem pública do web.
+rotacionado em cookie `HttpOnly`. Configure um segredo JWT com no mínimo 32
+caracteres e `AUTH_ALLOWED_ORIGIN` com a origem HTTP usada para acessar o web.
+O Compose fixa `AUTH_COOKIE_SECURE=false`, compatível com HTTP.
 
 Aplique as migrações no Data Lake, nesta ordem (elas são idempotentes):
 
@@ -142,218 +142,85 @@ permanecem públicos.
 ## 🚀 Como Executar o Projeto
 
 ### Pré-requisitos
-- **Python 3.10+**
-- **uv** instalado (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
-- Instâncias **PostgreSQL** em execução para a origem (`nvtr`) e destino (`nvdatalake`).
 
----
+- Docker com Compose para Kestra e dbt.
+- PostgreSQL de origem (`nvtr`) e destino (`nvdatalake`) acessíveis.
+- Python 3.11 e uv para executar a suíte de testes localmente.
 
-### 1. Configurar o Ambiente Dagster
+### Executar com Kestra
 
-Acesse o diretório do Dagster e instale as dependências:
-
-```bash
-cd dagster/nvdatalake
-uv sync
-source .venv/bin/activate
-```
-
----
-
-### 2. Executar a Interface do Dagster
-
-Inicie o servidor de desenvolvimento do Dagster:
+Configure as conexões e `KESTRA_*` no `.env` da raiz, depois:
 
 ```bash
-dg dev
+docker compose up -d --build kestra kestra-import
 ```
 
-Acesse o painel em **http://localhost:3000** para visualizar a linhagem de assets e disparar os pipelines de ingestão e transformação.
-
----
-
-### 3. Executar o dbt Diretamente (Opcional)
-
-Caso queira rodar apenas os modelos do dbt via linha de comando:
-
-```bash
-cd dbt/nvdatalake
-dbt build --profiles-dir ~/.dbt
-```
+Acesse **http://localhost:8082**, faça login e execute
+`nvdatalake.materialize_all`. O fluxo contempla as 14 tabelas de origem, todos
+os 24 modelos dbt e seus testes. O cron diário começa desabilitado; habilite o trigger `daily` para agendar as cargas. Para verificar a integração completa em
+bancos isolados, execute `./scripts/test_kestra.sh`. Mais detalhes em
+[kestra/README.md](kestra/README.md).
 
 ---
 
 ## 🐳 Empacotamento com Docker
 
-O projeto pode ser empacotado numa imagem única (Dagster + dbt embutido) pra rodar em outro servidor.
+O Compose usa Kestra com dbt embutido na imagem definida em
+[`kestra/Dockerfile`](kestra/Dockerfile). Os serviços são `kestra`,
+`kestra-postgres` (metadados), `kestra-import` (importação do fluxo), `api`
+e `web`. O dbt é executado pelo Kestra, sem serviço separado.
+Os bancos de origem e destino continuam externos.
 
-### Estrutura
-
-- **[`Dockerfile`](Dockerfile)** — imagem baseada em `python:3.11-slim` + `uv`. Empacota `dagster/nvdatalake` (que já inclui `dbt-postgres`) junto com `dbt/nvdatalake` (os models), preservando a mesma estrutura relativa de pastas que o código espera. Roda `dbt parse` no build (gera `target/manifest.json` dentro da imagem — necessário porque em produção, via `dagster-webserver`, o Dagster não regenera esse manifest sozinho como faz em `dg dev`). Sobe `dagster-webserver` na porta `3000`.
-- **[`.dockerignore`](.dockerignore)** — evita copiar `.venv`, `target/`, `logs/`, `__pycache__` etc para o contexto do build.
-- **[`docker-compose.yml`](docker-compose.yml)** — cinco serviços: `api` (Node.js), `web` (Nginx com o React compilado), `nvdatalake` (webserver, UI), `nvdatalake-daemon` (`dagster-daemon run`, processa a fila de execução) e `gateway` (Caddy, termina o TLS — ver [HTTPS com o gateway](#https-com-o-gateway-caddy)). **Sem o daemon, cliques de "Materialize" na UI não disparam o run.** Os dois serviços Dagster compartilham o mesmo `DAGSTER_HOME` (volume `dagster_home`) e as mesmas env vars, via YAML anchor (`x-nvdatalake-env`).
-
-Os bancos PostgreSQL (origem e destino) **não** são containerizados aqui — são instâncias externas já existentes, acessadas via variáveis de ambiente (ver seção [Destination database](dagster/nvdatalake/README.md#destination-database) e [Multi-source strategy](dagster/nvdatalake/README.md#multi-source-strategy)).
-
-### Build da imagem
-
-> Importante: o build precisa ser feito **a partir da raiz do repositório** (esta pasta), nunca de dentro de `dagster/nvdatalake` — o `Dockerfile` copia `dagster/nvdatalake` e `dbt/nvdatalake` como pastas irmãs, então o contexto do build tem que enxergar as duas.
-
-```bash
-docker build -t nvdatalake:latest .
-```
-
-### Verificar se os models dbt foram empacotados
-
-Os models dbt (`bronze/`, `silver/`, `gold/`) e o `profiles.yml` viajam dentro da imagem — não é preciso montar volume nem copiar nada manualmente pro servidor. Pra conferir:
-
-```bash
-# lista os arquivos dbt dentro da imagem
-docker run --rm nvdatalake:latest sh -c "ls -la /app/dbt/nvdatalake/models/bronze /app/dbt/nvdatalake/models/silver /app/dbt/nvdatalake/models/gold"
-
-# confirma que o dbt consegue parsear o projeto empacotado (não precisa de conexão real com o banco)
-docker run --rm -w /app/dagster/nvdatalake nvdatalake:latest \
-  sh -c "uv run dbt parse --project-dir /app/dbt/nvdatalake --profiles-dir /app/dbt/nvdatalake"
-```
-
-### Rodar com docker compose
-
-O Compose também compila e inicia a API e o web usando
-[`apps/api/Dockerfile`](apps/api/Dockerfile) e
-[`apps/web/Dockerfile`](apps/web/Dockerfile). O web encaminha `/api/` para a API
-pela rede interna do Docker; `VITE_API_URL` fica vazio no build. O Nginx também
-suporta acesso direto às rotas do React, como `/admin/usuarios`.
-
-Credenciais não ficam mais no `docker-compose.yml` — ele lê via `${VAR}` de um `.env` na raiz.
-Copia [`.env.example`](.env.example) pra `.env` e preenche com os valores reais (hosts, usuário,
-senha, nome de cada banco). `.env` é gitignored, nunca commitar credenciais nele. Cada origem
-usa seu próprio prefixo de env var, agrupado por `dbname` (`SOURCE_NVTR_DB_*` para o banco `nvtr`
-— compartilhado entre todos os schemas desse banco; uma origem com `dbname` novo usa seu próprio
-prefixo, ver [Adding a new source](dagster/nvdatalake/README.md#adding-a-new-source)), depois:
+Configure [`.env.example`](.env.example) em `.env`, incluindo conexões,
+`KESTRA_*` e `AUTH_JWT_SECRET`, depois execute:
 
 ```bash
 docker compose up -d --build
 ```
 
-No `.env` da raiz, configure `AUTH_JWT_SECRET` com um segredo aleatório de pelo
-menos 32 caracteres. Os arquivos `.env` em `apps/` não são usados pelo Compose.
-Para uso local, mantenha `AUTH_COOKIE_SECURE=false` e configure
-`AUTH_ALLOWED_ORIGIN=http://localhost:8080,http://127.0.0.1:8080`.
-Em produção com HTTPS, use `AUTH_COOKIE_SECURE=true` e a origem pública do web.
-As migrações e a criação do administrador seguem os passos de **Controle de acesso**;
-o Compose não as executa automaticamente.
-
-Os bancos continuam externos. Se estiverem na máquina que executa o Docker
-Desktop, use `host.docker.internal` nas variáveis de host; `localhost` dentro
-de um contêiner aponta para o próprio contêiner.
-
-Endereços padrão (portas internas, quando o gateway TLS não está no ar):
-
-- Web: **http://localhost:8080** (porta externa e interna 8080; Nginx em 8080; `WEB_PORT` no `.env`).
-- API: **http://localhost:3001/health** (`API_PORT` no `.env`).
-- Dagster: **http://localhost:3000**.
-
-Ao alterar `WEB_PORT`, ajuste também `AUTH_ALLOWED_ORIGIN`. O web aguarda o
-healthcheck HTTP da API; esse check não verifica o banco de dados.
-Para iniciar somente a API e o web:
+Para iniciar somente a orquestração:
 
 ```bash
-docker compose up -d --build api web
+docker compose up -d --build kestra kestra-import
 ```
 
-Confira os serviços:
+O web usa `/api/` pela rede interna. Para acesso local, mantenha
+`AUTH_COOKIE_SECURE=false` e ajuste `AUTH_ALLOWED_ORIGIN` ao endereço do web.
+As migrações e a criação do administrador seguem os passos de **Controle de acesso**;
+o Compose não as executa automaticamente. Para bancos no host Docker Desktop,
+use `host.docker.internal` em vez de `localhost` nas conexões dos contêineres.
+
+Endereços padrão:
+
+- Web: **http://localhost:8080** (`WEB_PORT`).
+- API: **http://localhost:3001/health** (`API_PORT`).
+- Kestra: **http://localhost:8082** ou **http://<host>:8082** (`KESTRA_PORT`).
+
+O Compose serve somente HTTP, sem gateway HTTPS. Para acesso remoto ao web,
+use `http://<host>:8080` e inclua essa origem em `AUTH_ALLOWED_ORIGIN` no `.env`,
+por exemplo `http://localhost:8080,http://<host>:8080`. Se alterar `WEB_PORT`,
+ajuste também as origens. A porta do Kestra é publicada em todas as interfaces;
+para acesso remoto, libere TCP `8082` para seu IP no firewall/Security Group.
+
+Ao atualizar uma stack que tinha o gateway, remova seu contêiner órfão sem
+apagar os volumes:
 
 ```bash
-docker compose ps
+docker compose up -d --build --remove-orphans
+```
+
+```bash
+docker compose ps -a
 docker compose logs --tail=30
 ```
 
-#### HTTPS com o gateway (`caddy`)
-
-O serviço `gateway` (imagem [`caddy:2-alpine`](apps/gateway/Caddyfile)) é o
-único com porta publicada: ele termina o TLS e encaminha para `web` e para o
-`nvdatalake`. `api`, `web` e `nvdatalake` ficam só na rede interna do Compose.
-
-O `dagster-webserver` **não serve HTTPS** — a CLI não tem
-`--ssl-certificate`/`--ssl-keyfile`, e o próprio Dagster recomenda proxy na
-frente. Por isso o TLS termina no gateway, não no container do Dagster.
-
-Antes de subir, gere a credencial do basic-auth (o `.env` não a guarda, porque
-o Compose interpolar `"$VAR"` corromperia o hash bcrypt):
+O código legado Dagster permanece no repositório, mas seus serviços e o volume
+`dagster_home` não fazem parte do Compose. Remova os contêineres antigos sem
+apagar volumes, caso ainda existam:
 
 ```bash
-cp apps/gateway/auth.caddy.example apps/gateway/auth.caddy
-docker run --rm caddy:2 caddy hash-password --plaintext 'sua-senha'
-# cole "<usuario> <hash>" no apps/gateway/auth.caddy
+docker rm -f nv-datalake-nvdatalake-1 nv-datalake-nvdatalake-daemon-1
 ```
-
-```bash
-docker compose up -d --build
-```
-
-- Web: **https://<host>:8443** (`TLS_PORT` no `.env`)
-- Dagster: **https://<host>:8444** (`DAGSTER_TLS_PORT` no `.env`), com basic-auth
-
-O certificado é self-signed, emitido pela autoridade interna do Caddy e
-persistido no volume `caddy_data`. O navegador vai avisar até você instalar a
-CA no cliente:
-
-```bash
-docker compose exec gateway cat /data/caddy/pki/authorities/local/root.crt > cert.pem
-```
-
-Instale `cert.pem` como raiz confiável (macOS: Keychain, *Sistema* →
-*Confie sempre*; Linux: `/usr/local/share/ca-certificates/` + `update-ca-certificates`).
-
-A UI do Dagster **não tem autenticação própria** e permite disparar runs — por
-isso o basic-auth é obrigatório, não opcional. Para produção de verdade,
-aponte um domínio próprio para o IP da instância e troque `tls internal` por
-`tls <dominio>` no [`apps/gateway/Caddyfile`](apps/gateway/Caddyfile): o Caddy
-passa a emitir e renovar via Let's Encrypt, e o aviso do navegador some.
-
-Com o gateway ativo, use `AUTH_COOKIE_SECURE=true` e a origem HTTPS em
-`AUTH_ALLOWED_ORIGIN` (`https://<host>:8443`). O `dagster` também deixou de
-publicar porta direta — para acesso pontual sem abrir nada na internet:
-
-```bash
-docker compose port gateway 8444   # ou ssh -L 8444:localhost:8444 <host>
-```
-
-### Rodar com docker run (sem compose)
-
-Sem compose, sobem dois containers manualmente — um pro webserver, um pro daemon —, ambos com as mesmas env vars e o mesmo `DAGSTER_HOME` compartilhado (ex: um volume nomeado):
-
-```bash
-docker run -d --name nvdatalake -p 3000:3000 \
-  -e SOURCE_NVTR_DB_HOST=host-origem -e SOURCE_NVTR_DB_PORT=5432 -e SOURCE_NVTR_DB_USER=usuario -e SOURCE_NVTR_DB_PASSWORD=senha -e SOURCE_NVTR_DB_NAME=nvtr \
-  -e DATALAKE_DB_HOST=host-destino -e DATALAKE_DB_PORT=5432 -e DATALAKE_DB_USER=usuario -e DATALAKE_DB_PASSWORD=senha -e DATALAKE_DB_NAME=nvdatalake \
-  -v dagster_home:/app/dagster_home \
-  nvdatalake:latest
-
-docker run -d --name nvdatalake-daemon \
-  -e SOURCE_NVTR_DB_HOST=host-origem -e SOURCE_NVTR_DB_PORT=5432 -e SOURCE_NVTR_DB_USER=usuario -e SOURCE_NVTR_DB_PASSWORD=senha -e SOURCE_NVTR_DB_NAME=nvtr \
-  -e DATALAKE_DB_HOST=host-destino -e DATALAKE_DB_PORT=5432 -e DATALAKE_DB_USER=usuario -e DATALAKE_DB_PASSWORD=senha -e DATALAKE_DB_NAME=nvdatalake \
-  -v dagster_home:/app/dagster_home \
-  nvdatalake:latest uv run dagster-daemon run
-```
-
-Acesse o painel do Dagster em **http://localhost:3000**.
-
-> `docker run` isolado (sem daemon) só serve pra rodar comandos avulsos, ex. `dagster asset materialize --select ... -m nvdatalake.definitions` — não pra manter a UI operacional com materialize funcionando.
-
-### Rodar fora do Docker (local)
-
-O script [`scripts/materialize_all.sh`](scripts/materialize_all.sh) roda a materialização
-completa local: lê `.env` (se existir), aponta o dbt pro `profiles.yml` do projeto (sem isso o
-dbt cai no `~/.dbt/profiles.yml` antigo com `localhost` fixo) e chama o `dagster asset
-materialize --select '*'`:
-
-```bash
-./scripts/materialize_all.sh
-```
-
-Atenção: se o `.env` tiver hosts tipo `host.docker.internal` (só resolve dentro de container),
-sobrescreve as vars de origem antes de rodar local, ex. `SOURCE_NVTR_DB_HOST=localhost`.
 
 ## 📊 Camadas de Dados
 

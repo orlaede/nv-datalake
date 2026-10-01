@@ -1,0 +1,297 @@
+version: 2
+models:
+- name: stg_agente
+  data_tests:
+  - unique_key:
+      arguments:
+        columns:
+        - source_key
+        - id
+  - staging_count:
+      arguments:
+        table_name: agente
+  columns:
+  - name: id
+    data_tests:
+    - not_null
+  - name: source_key
+    data_tests:
+    - not_null
+- name: stg_infracao
+  data_tests:
+  - unique_key:
+      arguments:
+        columns:
+        - source_key
+        - id
+  - staging_count:
+      arguments:
+        table_name: infracao
+  columns:
+  - name: id
+    data_tests:
+    - not_null
+  - name: source_key
+    data_tests:
+    - not_null
+- name: stg_municipio
+  data_tests:
+  - unique_key:
+      arguments:
+        columns:
+        - source_key
+        - codigo
+  - staging_count:
+      arguments:
+        table_name: municipio
+  columns:
+  - name: codigo
+    data_tests:
+    - not_null
+  - name: source_key
+    data_tests:
+    - not_null
+- name: stg_pessoa
+  data_tests:
+  - unique_key:
+      arguments:
+        columns:
+        - source_key
+        - id
+  - staging_count:
+      arguments:
+        table_name: pessoa
+  columns:
+  - name: id
+    data_tests:
+    - not_null
+  - name: source_key
+    data_tests:
+    - not_null
+- name: stg_veiculo
+  data_tests:
+  - unique_key:
+      arguments:
+        columns:
+        - source_key
+        - id
+  - staging_count:
+      arguments:
+        table_name: veiculo
+  columns:
+  - name: id
+    data_tests:
+    - not_null
+  - name: source_key
+    data_tests:
+    - not_null
+- name: stg_erro_consistencia
+  data_tests:
+  - unique_key:
+      arguments:
+        columns:
+        - source_key
+        - id
+  - staging_count:
+      arguments:
+        table_name: erro_consistencia
+  columns:
+  - name: id
+    data_tests:
+    - not_null
+  - name: source_key
+    data_tests:
+    - not_null
+- name: stg_auto_infracao
+  data_tests:
+  - unique_key:
+      arguments:
+        columns:
+        - source_key
+        - id
+  - staging_count:
+      arguments:
+        table_name: auto_infracao
+  columns:
+  - name: id
+    data_tests:
+    - not_null
+  - name: source_key
+    data_tests:
+    - not_null
+- name: dim_agente
+  columns:
+  - name: sk_agente
+    data_tests:
+    - unique
+    - not_null
+- name: dim_infracao
+  columns:
+  - name: sk_infracao
+    data_tests:
+    - unique
+    - not_null
+- name: dim_municipio
+  columns:
+  - name: sk_municipio
+    data_tests:
+    - unique
+    - not_null
+  - name: codigo
+    data_tests:
+    - unique
+    - not_null
+- name: dim_pessoa
+  columns:
+  - name: sk_pessoa
+    data_tests:
+    - unique
+    - not_null
+- name: dim_veiculo
+  columns:
+  - name: sk_veiculo
+    data_tests:
+    - unique
+    - not_null
+- name: dim_erro_consistencia
+  columns:
+  - name: sk_erro_consistencia
+    data_tests:
+    - unique
+    - not_null
+- name: dim_origem
+  columns:
+  - name: sk_origem
+    data_tests:
+    - unique
+    - not_null
+- name: fac_auto_infracao
+  data_tests:
+  - unique_key:
+      arguments:
+        columns:
+        - source_key
+        - id
+  columns:
+  - name: id
+    data_tests:
+    - not_null
+  - name: source_key
+    data_tests:
+    - not_null
+  - name: sk_origem
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_origem')
+          field: sk_origem
+  - name: sk_agente
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_agente')
+          field: sk_agente
+  - name: sk_condutor
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_pessoa')
+          field: sk_pessoa
+  - name: sk_infrator
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_pessoa')
+          field: sk_pessoa
+  - name: sk_infracao
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_infracao')
+          field: sk_infracao
+  - name: sk_municipio
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_municipio')
+          field: sk_municipio
+  - name: sk_veiculo
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_veiculo')
+          field: sk_veiculo
+  - name: sk_erro_consistencia
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_erro_consistencia')
+          field: sk_erro_consistencia
+- name: dim_agente_gold
+  data_tests:
+  - same_rows:
+      arguments:
+        compare_model: dim_agente
+- name: dim_infracao_gold
+  data_tests:
+  - same_rows:
+      arguments:
+        compare_model: dim_infracao
+- name: dim_municipio_gold
+  data_tests:
+  - same_rows:
+      arguments:
+        compare_model: dim_municipio
+- name: dim_pessoa_gold
+  data_tests:
+  - same_rows:
+      arguments:
+        compare_model: dim_pessoa
+- name: dim_veiculo_gold
+  data_tests:
+  - same_rows:
+      arguments:
+        compare_model: dim_veiculo
+- name: dim_erro_consistencia_gold
+  data_tests:
+  - same_rows:
+      arguments:
+        compare_model: dim_erro_consistencia
+- name: dim_origem_gold
+  data_tests:
+  - same_rows:
+      arguments:
+        compare_model: dim_origem
+- name: fac_auto_infracao_gold
+  data_tests:
+  - same_rows:
+      arguments:
+        compare_model: fac_auto_infracao
+- name: fac_auto_infracao_mensal
+  data_tests:
+  - unique_key:
+      arguments:
+        columns:
+        - mes
+        - sk_origem
+        - sk_infracao
+        - sk_agente
+        - medicao_id
+  columns:
+  - name: total_autos
+    data_tests:
+    - not_null
+  - name: sk_origem
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_origem_gold')
+          field: sk_origem

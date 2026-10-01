@@ -24,20 +24,11 @@
 	reverse_proxy web:8080
 }
 
-:{$DAGSTER_TLS_PORT} {
+:{$KESTRA_TLS_PORT} {
 	tls internal
 
-	# A UI do Dagster nao tem autenticacao propria e permite disparar runs.
-	# Basic-auth obrigatorio: sem credencial valida o proxy responde 401.
-	# As credenciais vem de /etc/caddy/auth.caddy (gitignored) em vez de env var:
-	# um hash bcrypt tem "$" em cada campo e o Compose interpolar "$VAR" no valor,
-	# corrompendo o hash silenciosamente.
-	basic_auth {
-		import /etc/caddy/auth.caddy
-	}
-
-	# Websocket do live-reload e SSE dos eventos exigem upgrade e buffering off.
-	reverse_proxy nvdatalake:3000 {
+	# Kestra exige autenticação própria; preserve streaming dos eventos.
+	reverse_proxy kestra:8080 {
 		flush_interval -1
 	}
 }
