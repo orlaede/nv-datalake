@@ -10,7 +10,7 @@ x-nvdatalake-env: &nvdatalake-env
   SOURCE_NVTR_DB_PASSWORD: ${SOURCE_NVTR_DB_PASSWORD}
   SOURCE_NVTR_DB_NAME: ${SOURCE_NVTR_DB_NAME}
 
-  # Destination db (nvdatalake) — used by both the Dagster loader and dbt
+  # Destination db (nvdatalake) — used by the Kestra loader and dbt
   DATALAKE_DB_HOST: ${DATALAKE_DB_HOST}
   DATALAKE_DB_PORT: ${DATALAKE_DB_PORT}
   DATALAKE_DB_USER: ${DATALAKE_DB_USER}
@@ -20,7 +20,6 @@ x-nvdatalake-env: &nvdatalake-env
 services:
   kestra-postgres:
     image: postgres:16-alpine
-    profiles: [kestra]
     restart: unless-stopped
     environment:
       POSTGRES_DB: kestra
@@ -39,7 +38,6 @@ services:
       context: .
       dockerfile: kestra/Dockerfile
     image: nvdatalake-kestra:local
-    profiles: [kestra]
     restart: unless-stopped
     command: ["server", "standalone"]
     ports:
@@ -91,7 +89,6 @@ services:
 
   kestra-import:
     image: nvdatalake-kestra:local
-    profiles: [kestra]
     depends_on:
       kestra:
         condition: service_healthy
@@ -137,47 +134,24 @@ services:
       api:
         condition: service_healthy
 
-  nvdatalake:
-    build: .
-    image: nvdatalake:latest
-    environment:
-      <<: *nvdatalake-env
-      DAGSTER_HOME: /app/dagster_home
-    volumes:
-      - dagster_home:/app/dagster_home
-
-  nvdatalake-daemon:
-    image: nvdatalake:latest
-    depends_on:
-      - nvdatalake
-    command: ["uv", "run", "dagster-daemon", "run"]
-    environment:
-      <<: *nvdatalake-env
-      DAGSTER_HOME: /app/dagster_home
-    volumes:
-      - dagster_home:/app/dagster_home
-
-  # Gateway TLS. Único serviço com porta publicada: web em HTTPS, Dagster em HTTPS
-  # com basic-auth. Api, web e nvdatalake ficam apenas na rede interna do Compose.
+  # Gateway TLS para web e Kestra; autenticação do Kestra no próprio serviço.
   gateway:
     image: caddy:2-alpine
     restart: unless-stopped
     depends_on:
       - web
+      - kestra
     ports:
       - "${TLS_PORT:-8443}:${TLS_PORT:-8443}"
-      - "${DAGSTER_TLS_PORT:-8444}:${DAGSTER_TLS_PORT:-8444}"
+      - "${KESTRA_TLS_PORT:-8444}:${KESTRA_TLS_PORT:-8444}"
     environment:
       TLS_PORT: ${TLS_PORT:-8443}
-      DAGSTER_TLS_PORT: ${DAGSTER_TLS_PORT:-8444}
+      KESTRA_TLS_PORT: ${KESTRA_TLS_PORT:-8444}
     volumes:
       - ./apps/gateway/Caddyfile:/etc/caddy/Caddyfile:ro
-      # gitignored; ver apps/gateway/auth.caddy.example
-      - ./apps/gateway/auth.caddy:/etc/caddy/auth.caddy:ro
       - caddy_data:/data
 
 volumes:
   kestra_postgres:
   kestra_storage:
-  dagster_home:
   caddy_data:

@@ -1,6 +1,6 @@
 # Kestra + dbt
 
-O Kestra executa o pipeline completo como alternativa ao Dagster: as 14 tabelas
+O Kestra executa o pipeline completo como orquestrador padrão: as 14 tabelas
 de `SOURCES` são copiadas para Bronze, depois o projeto dbt inteiro é executado
 com `dbt build` (24 modelos e todos os testes). O projeto dbt, `profiles.yml`,
 macros, aliases, schemas, paths e dependências são os mesmos do Dagster.
@@ -13,7 +13,7 @@ conexões existentes e as variáveis `KESTRA_*`. Escolha senhas próprias para
 maiúscula e número), e um e-mail para `KESTRA_API_USER`.
 
 ```bash
-docker compose --profile kestra up -d --build kestra kestra-import
+docker compose up -d --build kestra kestra-import
 docker compose logs kestra-import
 ```
 
@@ -30,8 +30,9 @@ Para acesso a um servidor remoto, use túnel SSH:
 ssh -L 8082:127.0.0.1:8082 usuario@servidor
 ```
 
-Os serviços Dagster permanecem disponíveis. O profile `kestra` é opcional e
-não muda a inicialização padrão dos serviços existentes. O PostgreSQL
+O Compose inicia Kestra e dbt sem serviços Dagster. O código Python de ingestão
+e o ambiente de dependências continuam em `dagster/nvdatalake`, compartilhados
+com o código legado. O PostgreSQL
 `kestra-postgres` guarda somente metadados do orquestrador; origem e Data Lake
 continuam sendo as conexões externas configuradas por `SOURCE_NVTR_DB_*` e
 `DATALAKE_DB_*`. `PGSSLMODE` é aplicado à ingestão e ao dbt. Dentro de contêineres,
@@ -79,12 +80,10 @@ falha, é cancelada, é morta, termina com warning ou excede o timeout.
 
 ## Agendamento
 
-O cron é `0 3 * * *`, timezone `America/Sao_Paulo`, equivalente ao Dagster.
-Começa **desabilitado**. Para usar Kestra diariamente, desative primeiro o
-schedule Dagster `materialize_all_schedule` e habilite o trigger `daily`.
+O cron é `0 3 * * *`, timezone `America/Sao_Paulo`.
+Começa **desabilitado**. Para usar Kestra diariamente, habilite o trigger `daily`.
 Para persistir a escolha no Git, mude `disabled: false` no flow e importe-o.
-A limitação de concorrência do Kestra não coordena execuções do Dagster:
-evite disparar os dois contra o mesmo destino ao mesmo tempo.
+Há no máximo uma execução deste fluxo por vez.
 
 ## Testar tudo
 
@@ -121,7 +120,7 @@ Veja as evidências e a reconstrução real pendente em [VALIDATION.md](VALIDATI
 ## Diagnóstico
 
 ```bash
-docker compose --profile kestra ps -a
+docker compose ps -a
 docker compose logs --tail=100 kestra kestra-import kestra-postgres
 ```
 
