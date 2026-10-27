@@ -9,16 +9,14 @@ ENV UV_PYTHON_INSTALL_DIR=/opt/python
 RUN uv python install 3.11
 
 WORKDIR /opt/nvdatalake
-COPY dagster/nvdatalake/pyproject.toml dagster/nvdatalake/uv.lock dagster/nvdatalake/
-RUN uv sync --project dagster/nvdatalake --frozen --no-dev --no-install-project --python 3.11
-COPY dagster/nvdatalake/src dagster/nvdatalake/src
+COPY kestra/pyproject.toml kestra/uv.lock kestra/
+RUN uv sync --project kestra --frozen --no-dev --no-install-project --python 3.11
 COPY dbt/nvdatalake dbt/nvdatalake
 COPY kestra/ingest.py kestra/ingest.py
 COPY scripts/kestra.py scripts/kestra.py
 COPY kestra/flows /opt/kestra/flows
 
-ENV PATH="/opt/nvdatalake/dagster/nvdatalake/.venv/bin:${PATH}"
-ENV PYTHONPATH=/opt/nvdatalake/dagster/nvdatalake/src
+ENV PATH="/opt/nvdatalake/kestra/.venv/bin:${PATH}"
 RUN dbt parse --project-dir dbt/nvdatalake --profiles-dir dbt/nvdatalake \
     && rm -rf dbt/nvdatalake/target dbt/nvdatalake/logs \
     && mkdir -p /app/storage /tmp/kestra-wd \

@@ -11,6 +11,44 @@ concurrency:
   limit: 1
   behavior: QUEUE
 
+# Origens de dados. `schemas` são os schemas do banco `dbname`; todos têm as
+# mesmas `tables`. A conexão vem de SOURCE_<DBNAME>_DB_* (ou
+# SOURCE_<DBNAME>_DB_URL). A tabela Bronze se chama <dbname>_<schema>__<tabela>.
+# Para adicionar um schema, basta acrescentá-lo em `schemas` (pluginDefaults
+# repassa estas variáveis à ingestão e ao dbt; a macro bronze_union monta os
+# modelos de staging). Inclua o nome de exibição em silver/dim_origem.sql.
+variables:
+  dbname: nvtr
+  schemas:
+    - ce_caucaia_amostra
+    - ce_quixada
+    - sc_pomerode
+    - sc_bcamboriu
+    - pr_curitiba
+    - ba_ilheust
+  tables:
+    - auto_infracao
+    - agente
+    - infracao
+    - municipio
+    - pessoa
+    - veiculo
+    - erro_consistencia
+
+pluginDefaults:
+  - type: io.kestra.plugin.scripts.shell.Commands
+    values:
+      env:
+        NVDATALAKE_DBNAME: "{{ vars.dbname }}"
+        NVDATALAKE_SCHEMAS: "{{ vars.schemas | json }}"
+        NVDATALAKE_TABLES: "{{ vars.tables | json }}"
+  - type: io.kestra.plugin.dbt.cli.DbtCLI
+    values:
+      env:
+        NVDATALAKE_DBNAME: "{{ vars.dbname }}"
+        NVDATALAKE_SCHEMAS: "{{ vars.schemas | json }}"
+        NVDATALAKE_TABLES: "{{ vars.tables | json }}"
+
 tasks:
   - id: pipeline
     type: io.kestra.plugin.core.flow.WorkingDirectory

@@ -1,4 +1,4 @@
-# Credencial do basic-auth do gateway TLS (UI do Dagster).
+# Credencial do basic-auth do gateway TLS (UI do Kestra).
 #
 # Copie este arquivo para `auth.caddy` (gitignored) e troque a linha abaixo:
 #
@@ -11,4 +11,4 @@
 # Vem por arquivo, e nao por env var, porque o Compose interpola "$VAR" e o
 # hash bcrypt tem "$" em todos os campos ($2a$14$<salt><hash>) — o valor
 # chegaria corrompido no container, sem erro visivel.
-dagster SUBSTITUA_PELO_HASH_BCRYPT
+kestra SUBSTITUA_PELO_HASH_BCRYPT

@@ -1,13 +1,22 @@
-import importlib
 import os
 
 import pytest
 from sqlalchemy import create_engine, text
 
 
-def test_loader_available_without_dagster_definitions():
-    module = importlib.import_module("nvdatalake.defs.bronze_loader")
-    assert callable(module.load_bronze_table)
+def test_sources_come_from_flow_variables():
+    from pathlib import Path
+
+    import yaml
+
+    from kestra.ingest import build_sources
+
+    flow = yaml.safe_load((Path(__file__).resolve().parents[1] / "flows/materialize_all.yml").read_text())
+    variables = flow["variables"]
+    sources = build_sources(variables["dbname"], variables["schemas"], variables["tables"])
+    assert sources[0].key == "nvtr_ce_caucaia_amostra"
+    assert all(source.tables == variables["tables"] for source in sources)
+    assert {source.env_prefix for source in sources} == {"SOURCE_NVTR"}
 
 
 def test_connection_preserves_special_password(monkeypatch):
@@ -31,14 +40,13 @@ def test_source_url_override(monkeypatch):
 
 
 def test_nullable_types_and_replacement():
-    from nvdatalake.defs.bronze_loader import load_bronze_table
-    from nvdatalake.defs.sources_config import SourceConfig
+    from kestra.ingest import Source, load_bronze_table
 
     url = os.environ.get("TEST_DATABASE_URL")
     if not url:
         pytest.skip("Set TEST_DATABASE_URL to an isolated PostgreSQL database")
     engine = create_engine(url)
-    source = SourceConfig(dbname="fixture", schema="loader_test", tables=["sample"])
+    source = Source(dbname="fixture", schema="loader_test", tables=["sample"])
     try:
         with engine.begin() as conn:
             conn.execute(text("CREATE SCHEMA IF NOT EXISTS loader_test"))

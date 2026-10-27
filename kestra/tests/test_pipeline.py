@@ -9,12 +9,16 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 
-from nvdatalake.defs.sources_config import SOURCES
+import yaml
+
+from kestra.ingest import build_sources
 from scripts.kestra import Client
 
 
 pytestmark = pytest.mark.skipif(not os.environ.get("KESTRA_TEST_URL"), reason="Run scripts/test_kestra.sh for real Kestra integration tests")
 ROOT = Path(__file__).resolve().parents[2]
+_VARIABLES = yaml.safe_load((ROOT / "kestra/flows/materialize_all.yml").read_text())["variables"]
+SOURCES = build_sources(_VARIABLES["dbname"], _VARIABLES["schemas"], _VARIABLES["tables"])
 DIMENSIONS = ["agente", "infracao", "municipio", "pessoa", "veiculo", "erro_consistencia", "origem"]
 
 
@@ -27,8 +31,8 @@ def databases():
         engines.append(create_engine(url))
     source, destination = engines
     with source.begin() as conn:
-        conn.execute(text("DROP SCHEMA IF EXISTS ce_caucaia_amostra CASCADE"))
-        conn.execute(text("DROP SCHEMA IF EXISTS ce_quixada CASCADE"))
+        for config in SOURCES:
+            conn.execute(text(f"DROP SCHEMA IF EXISTS {config.schema} CASCADE"))
         conn.execute(text((ROOT / "kestra/tests/fixtures.sql").read_text()))
     with destination.begin() as conn:
         for schema in ["bronze", "silver", "gold"]:
@@ -68,7 +72,6 @@ def test_all_models_tests_profiles_and_artifacts(execution, client):
     catalog = read_artifact(client, execution, "docs_dbt", "catalog.json")
     models = {key: node for key, node in manifest["nodes"].items() if node["resource_type"] == "model"}
     assert len(models) == 24
-    assert len(manifest["sources"]) == 14
     assert set(models) == {row["unique_id"] for row in results["results"] if row["unique_id"].startswith("model.")}
     tests = {key for key, node in manifest["nodes"].items() if node["resource_type"] == "test"}
     assert tests == {row["unique_id"] for row in results["results"] if row["unique_id"].startswith("test.")}
@@ -100,22 +103,40 @@ def test_all_bronze_sources_types_and_staging(execution, databases, client):
         assert dst.execute(text("SELECT situacao_habilitacao FROM bronze.stg_pessoa WHERE source_key='nvtr_ce_quixada'")).scalar() is None
         assert dst.execute(text("SELECT motivo_cancelamento FROM bronze.stg_auto_infracao WHERE source_key='nvtr_ce_quixada' AND id=1")).scalar() is None
         assert dst.execute(text("SELECT motivo_cancelamento FROM bronze.stg_auto_infracao WHERE source_key='nvtr_ce_caucaia_amostra' AND id=1")).scalar() == "JUSTIFICADO"
+        # Columns that exist in only some schemas are kept, null for the others.
+        for table, column in [("auto_infracao", "cod_pre_auto"), ("auto_infracao", "arquivo_ftp_retorno_id"), ("infracao", "valor"), ("infracao", "orgao_interposicao"), ("veiculo", "exercicio")]:
+            assert dst.execute(text(f"SELECT count(*) FROM information_schema.columns WHERE table_schema='bronze' AND table_name='stg_{table}' AND column_name='{column}'")).scalar() == 1
+            assert dst.execute(text(f"SELECT count(*) FROM bronze.stg_{table} WHERE {column} IS NOT NULL")).scalar() == 0
 
 
 def test_dimensions_and_fact_resolution(execution, databases):
     _, destination = databases
     with destination.connect() as conn:
         for dim in DIMENSIONS:
-            expected = 2 if dim in {"municipio", "origem"} else 3
+            expected = {"municipio": 2, "origem": len(SOURCES)}.get(dim, len(SOURCES) + 1)
             assert conn.execute(text(f"SELECT count(*) FROM silver.dim_{dim}")).scalar() == expected
             if dim != "origem":
                 assert conn.execute(text(f"SELECT count(*) FROM silver.dim_{dim} WHERE sk_{dim}=0")).scalar() == 1
         assert conn.execute(text("SELECT descricao, version FROM silver.dim_municipio WHERE codigo=2304400")).one() == ("Fortaleza", 0)
         rows = conn.execute(text("SELECT f.source_key, a.nome, p.nome, v.placa FROM silver.fac_auto_infracao f JOIN silver.dim_agente a USING (sk_agente) JOIN silver.dim_pessoa p ON f.sk_condutor=p.sk_pessoa JOIN silver.dim_veiculo v USING (sk_veiculo) WHERE f.id=1 ORDER BY f.source_key")).all()
-        assert rows == [("nvtr_ce_caucaia_amostra", "Agente Caucaia", "Ana", "AAA0001"), ("nvtr_ce_quixada", "Agente Quixada", "Beto", "BBB0002")]
+        assert rows == [
+            ("nvtr_ba_ilheust", "Agente Ilheus", "Pessoa Ilheus", "ILH0001"),
+            ("nvtr_ce_caucaia_amostra", "Agente Caucaia", "Ana", "AAA0001"),
+            ("nvtr_ce_quixada", "Agente Quixada", "Beto", "BBB0002"),
+            ("nvtr_pr_curitiba", "Agente Curitiba", "Pessoa Curitiba", "CUR0001"),
+            ("nvtr_sc_bcamboriu", "Agente Bcamboriu", "Pessoa Bcamboriu", "BCA0001"),
+            ("nvtr_sc_pomerode", "Agente Pomerode", "Pessoa Pomerode", "POM0001"),
+        ]
         keys = "sk_agente, sk_condutor, sk_infracao, sk_infrator, sk_municipio, sk_veiculo, sk_erro_consistencia"
-        assert conn.execute(text(f"SELECT {keys} FROM silver.fac_auto_infracao WHERE id=3")).all() == [(0,) * 7, (0,) * 7]
-        assert conn.execute(text("SELECT source_key, nome FROM silver.dim_origem ORDER BY source_key")).all() == [("nvtr_ce_caucaia_amostra", "Caucaia (Amostra)"), ("nvtr_ce_quixada", "Quixadá")]
+        assert conn.execute(text(f"SELECT {keys} FROM silver.fac_auto_infracao WHERE id=3")).all() == [(0,) * 7] * len(SOURCES)
+        assert conn.execute(text("SELECT source_key, nome FROM silver.dim_origem ORDER BY source_key")).all() == [
+            ("nvtr_ba_ilheust", "Ilhéus"),
+            ("nvtr_ce_caucaia_amostra", "Caucaia (Amostra)"),
+            ("nvtr_ce_quixada", "Quixadá"),
+            ("nvtr_pr_curitiba", "Curitiba"),
+            ("nvtr_sc_bcamboriu", "Balneário Camboriú"),
+            ("nvtr_sc_pomerode", "Pomerode"),
+        ]
 
 
 def test_gold_mirrors_and_monthly_totals(execution, databases):
@@ -125,7 +146,8 @@ def test_gold_mirrors_and_monthly_totals(execution, databases):
             sql = f"(SELECT * FROM silver.{name} EXCEPT ALL SELECT * FROM gold.{name}) UNION ALL (SELECT * FROM gold.{name} EXCEPT ALL SELECT * FROM silver.{name})"
             assert conn.execute(text(sql)).all() == []
         rows = conn.execute(text("SELECT to_char(mes, 'YYYY-MM'), sk_origem, total_autos FROM gold.fac_auto_infracao_mensal ORDER BY mes, sk_origem")).all()
-        assert rows == [("2026-01", 1, 2), ("2026-01", 2, 2), ("2026-02", 1, 1), ("2026-02", 2, 1)]
+        origens = range(1, len(SOURCES) + 1)
+        assert rows == [("2026-01", sk, 2) for sk in origens] + [("2026-02", sk, 1) for sk in origens]
 
 
 def test_repeat_execution_is_idempotent(execution, client, databases):
@@ -133,8 +155,8 @@ def test_repeat_execution_is_idempotent(execution, client, databases):
     assert second["state"]["current"] == "SUCCESS"
     _, destination = databases
     with destination.connect() as conn:
-        assert conn.execute(text("SELECT count(*) FROM gold.fac_auto_infracao")).scalar() == 6
-        assert conn.execute(text("SELECT sum(total_autos) FROM gold.fac_auto_infracao_mensal")).scalar() == 6
+        assert conn.execute(text("SELECT count(*) FROM gold.fac_auto_infracao")).scalar() == 3 * len(SOURCES)
+        assert conn.execute(text("SELECT sum(total_autos) FROM gold.fac_auto_infracao_mensal")).scalar() == 3 * len(SOURCES)
 
 
 def test_history_and_artifacts_survive_restart(execution, client):
@@ -144,7 +166,7 @@ def test_history_and_artifacts_survive_restart(execution, client):
     restored = client.request("GET", f"/executions/{execution['id']}")
     assert restored["state"]["current"] == "SUCCESS"
     assert read_artifact(client, restored, "build_dbt", "manifest.json") == read_artifact(client, execution, "build_dbt", "manifest.json")
-    assert len(read_artifact(client, restored, "ingest_bronze", "ingestion.json")) == 14
+    assert len(read_artifact(client, restored, "ingest_bronze", "ingestion.json")) == len(SOURCES) * len(_VARIABLES["tables"])
 
 
 def test_ingestion_failure_prevents_dbt(execution, client, databases):

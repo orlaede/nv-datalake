@@ -25,7 +25,7 @@ export KESTRA_API_USER=admin@kestra.local
 export KESTRA_API_PASSWORD='Fixture123!'
 export TEST_SOURCE_URL='postgresql+psycopg2://postgres:fixture@127.0.0.1:55440/nvtr'
 export TEST_DATABASE_URL='postgresql+psycopg2://postgres:fixture@127.0.0.1:55440/nvdatalake'
-export PYTHONPATH="$ROOT_DIR:$ROOT_DIR/dagster/nvdatalake/src"
+export PYTHONPATH="$ROOT_DIR"
 export PGSSLMODE=disable
 export DBT_PROFILES_DIR="$ROOT_DIR/dbt/nvdatalake"
 export SOURCE_NVTR_DB_HOST=127.0.0.1 SOURCE_NVTR_DB_PORT=55440
@@ -33,10 +33,7 @@ export SOURCE_NVTR_DB_USER=postgres SOURCE_NVTR_DB_PASSWORD=fixture SOURCE_NVTR_
 export DATALAKE_DB_HOST=127.0.0.1 DATALAKE_DB_PORT=55440
 export DATALAKE_DB_USER=postgres DATALAKE_DB_PASSWORD=fixture DATALAKE_DB_NAME=nvdatalake
 
-uv run --project dagster/nvdatalake --frozen python -m pytest kestra/tests -v
+uv run --project kestra --frozen python -m pytest kestra/tests -v
 
-# Restore a valid pipeline after tests intentionally inject failures; then verify
-# Dagster's original tests against the same isolated databases.
-uv run --project dagster/nvdatalake --frozen python scripts/kestra.py run --url "$KESTRA_TEST_URL"
-uv run --project dagster/nvdatalake --frozen dbt parse --project-dir dbt/nvdatalake --profiles-dir dbt/nvdatalake
-uv run --project dagster/nvdatalake --frozen python -m pytest dagster/nvdatalake/tests -v
+# Restore a valid pipeline after tests intentionally inject failures.
+uv run --project kestra --frozen python scripts/kestra.py run --url "$KESTRA_TEST_URL"

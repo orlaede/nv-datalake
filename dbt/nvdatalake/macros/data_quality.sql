@@ -12,13 +12,18 @@ union all
 {% endtest %}
 
 {% test staging_count(model, table_name) %}
+{%- set dbname = env_var('NVDATALAKE_DBNAME', '') -%}
+{%- set schemas = fromjson(env_var('NVDATALAKE_SCHEMAS', '[]')) -%}
+{%- if execute and schemas | length == 0 -%}
+    {{ exceptions.raise_compiler_error('NVDATALAKE_DBNAME / NVDATALAKE_SCHEMAS are not set; run the dbt project through the Kestra flow') }}
+{%- endif -%}
 select source_key
 from (
-    select 'nvtr_ce_caucaia_amostra' as source_key, count(*) as expected
-    from {{ source('bronze', 'nvtr_ce_caucaia_amostra__' ~ table_name) }}
-    union all
-    select 'nvtr_ce_quixada' as source_key, count(*) as expected
-    from {{ source('bronze', 'nvtr_ce_quixada__' ~ table_name) }}
+    {%- for schema in schemas %}
+    select '{{ dbname ~ '_' ~ schema }}' as source_key, count(*) as expected
+    from {{ api.Relation.create(database=target.database, schema='bronze', identifier=dbname ~ '_' ~ schema ~ '__' ~ table_name) }}
+    {% if not loop.last %}union all{% endif %}
+    {%- endfor %}
 ) expected
 left join (
     select source_key, count(*) as actual from {{ model }} group by source_key

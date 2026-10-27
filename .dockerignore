@@ -4,7 +4,6 @@
 **/target
 **/dbt_packages
 **/logs
-**/.dg
 **/.serena
 .git
 .DS_Store

@@ -1,6 +1,10 @@
 -- Synthetic data only. Applied exclusively to the isolated test source database.
 CREATE SCHEMA ce_caucaia_amostra;
 CREATE SCHEMA ce_quixada;
+CREATE SCHEMA sc_pomerode;
+CREATE SCHEMA sc_bcamboriu;
+CREATE SCHEMA pr_curitiba;
+CREATE SCHEMA ba_ilheust;
 
 CREATE TABLE ce_caucaia_amostra.agente (
     id bigint, matricula text, nome text, nome_guerra text,
@@ -82,3 +86,43 @@ VALUES
     (1, 'Q001', 1, 1, 1, 1, 2304400, 10, 1, '2026-01-10 10:00', 1),
     (2, 'Q002', 1, 1, 1, 1, 2304400, 10, 1, '2026-01-20 11:00', 1),
     (3, 'Q003', 999, NULL, 999, 999, 999, NULL, 999, '2026-02-05 12:00', NULL);
+
+-- Remaining schemas mirror ce_caucaia_amostra, then drift like the real sources.
+DO $$
+DECLARE
+    schemas text[] = ARRAY['sc_pomerode', 'sc_bcamboriu', 'pr_curitiba', 'ba_ilheust'];
+    labels text[] = ARRAY['Pomerode', 'Bcamboriu', 'Curitiba', 'Ilheus'];
+    s text;
+    l text;
+    t text;
+BEGIN
+    FOR i IN 1..4 LOOP
+        s = schemas[i];
+        l = labels[i];
+        FOREACH t IN ARRAY ARRAY['agente', 'infracao', 'municipio', 'pessoa', 'veiculo', 'erro_consistencia', 'auto_infracao'] LOOP
+            EXECUTE format('CREATE TABLE %I.%I (LIKE ce_caucaia_amostra.%I)', s, t, t);
+        END LOOP;
+        EXECUTE format('INSERT INTO %I.agente (id, matricula, nome, usuario_id) VALUES (1, %L, %L, 9)', s, l, 'Agente ' || l);
+        EXECUTE format('INSERT INTO %I.infracao (id, descricao, pontos_cnh, abordagem) VALUES (1, %L, 3, true)', s, 'Infração ' || l);
+        EXECUTE format('INSERT INTO %I.municipio VALUES (2304400, %L, 23, 0)', s, 'Fortaleza');
+        EXECUTE format('INSERT INTO %I.pessoa (id, nome) VALUES (1, %L)', s, 'Pessoa ' || l);
+        EXECUTE format('INSERT INTO %I.veiculo (id, placa, modelo, proprietario_id) VALUES (1, %L, %L, 1)', s, upper(left(l, 3)) || '0001', 'Veículo ' || l);
+        EXECUTE format('INSERT INTO %I.erro_consistencia VALUES (1, %L)', s, 'Erro ' || l);
+        EXECUTE format($q$INSERT INTO %I.auto_infracao
+            (id, num_auto, agente_id, condutor_id, infracao_id, infrator_id, municipio_codigo,
+             medicao_id, veiculo_id, data_hora, erro_consistencia_id)
+            VALUES
+            (1, %L, 1, 1, 1, 1, 2304400, 10, 1, '2026-01-10 10:00', 1),
+            (2, %L, 1, 1, 1, 1, 2304400, 10, 1, '2026-01-20 11:00', 1),
+            (3, %L, 999, NULL, 999, 999, 999, NULL, 999, '2026-02-05 12:00', NULL)$q$,
+            s, l || '1', l || '2', l || '3');
+    END LOOP;
+END $$;
+
+ALTER TABLE sc_pomerode.auto_infracao ADD COLUMN cod_pre_auto text;
+ALTER TABLE sc_pomerode.infracao ADD COLUMN valor numeric(10,2);
+ALTER TABLE sc_pomerode.veiculo ADD COLUMN exercicio integer;
+ALTER TABLE sc_bcamboriu.auto_infracao ADD COLUMN arquivo_ftp_retorno_id bigint;
+ALTER TABLE sc_bcamboriu.auto_infracao DROP COLUMN motivo_cancelamento;
+ALTER TABLE pr_curitiba.infracao ADD COLUMN orgao_interposicao text;
+ALTER TABLE ba_ilheust.auto_infracao ADD COLUMN cod_pre_auto text;

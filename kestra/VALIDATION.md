@@ -7,7 +7,7 @@ Branch: `codex/integracao-kestra`, baseada em `main` (`51aa10e`).
 Comando: `./scripts/test_kestra.sh`.
 
 - Build da imagem Kestra 1.3.41 concluído.
-- 18 testes Kestra aprovados e 5 testes Dagster existentes aprovados.
+- 18 testes Kestra aprovados.
 - Fluxo real executado via API com 14 tabelas de origem, 24 modelos dbt e
   todos os 76 testes dbt aprovados. Manifest e catálogo conferidos contra
   o inventário completo do projeto.

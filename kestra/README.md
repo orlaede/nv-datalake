@@ -1,9 +1,9 @@
 # Kestra + dbt
 
-O Kestra executa o pipeline completo como orquestrador padrão: as 14 tabelas
-de `SOURCES` são copiadas para Bronze, depois o projeto dbt inteiro é executado
-com `dbt build` (24 modelos e todos os testes). O projeto dbt, `profiles.yml`,
-macros, aliases, schemas, paths e dependências são os mesmos do Dagster.
+O Kestra executa o pipeline completo como orquestrador padrão: as tabelas
+de `variables.schemas` e `variables.tables` do fluxo são copiadas para Bronze, depois o projeto dbt
+inteiro é executado com `dbt build` (24 modelos e todos os testes). O projeto
+dbt, `profiles.yml`, macros, aliases, schemas e paths ficam em `dbt/nvdatalake`.
 
 ## Iniciar
 
@@ -32,17 +32,29 @@ interfaces. Como alternativa, use túnel SSH:
 ssh -L 8082:127.0.0.1:8082 usuario@servidor
 ```
 
-O Compose inicia Kestra e dbt sem serviços Dagster. O código Python de ingestão
-e o ambiente de dependências continuam em `dagster/nvdatalake`, compartilhados
-com o código legado. O PostgreSQL
+O código Python de ingestão (`kestra/ingest.py`) e suas dependências
+(`kestra/pyproject.toml`, `kestra/uv.lock`) ficam neste diretório. O PostgreSQL
 `kestra-postgres` guarda somente metadados do orquestrador; origem e Data Lake
 continuam sendo as conexões externas configuradas por `SOURCE_NVTR_DB_*` e
 `DATALAKE_DB_*`. `PGSSLMODE` é aplicado à ingestão e ao dbt. Dentro de contêineres,
 use `host.docker.internal` para bancos no host, em vez de `localhost`.
 
+## Origens de dados
+
+As origens ficam em `variables` de
+[`flows/materialize_all.yml`](flows/materialize_all.yml): `dbname` (banco),
+`schemas` (lista de schemas) e `tables` (lista única, igual para todos os
+schemas). Cada par schema/tabela vira a tabela Bronze
+`<dbname>_<schema>__<tabela>`. A conexão vem de `SOURCE_<DBNAME>_DB_*` (ou
+`SOURCE_<DBNAME>_DB_URL`), compartilhada pelos schemas do banco. Para adicionar
+um schema, acrescente-o em `schemas`, inclua o nome de exibição em
+`dbt/nvdatalake/models/silver/dim_origem.sql` e importe o fluxo. Os modelos de
+staging unem os schemas com a macro `bronze_union`, que preenche com `null` as
+colunas ausentes em algum schema.
+
 ## Fluxo e artefatos
 
-1. `ingest_bronze`: usa a mesma função de carga do Dagster, preservando tipos
+1. `ingest_bronze`: carrega as origens de `variables.schemas`, preservando tipos
    PostgreSQL, e salva `ingestion.json` com a contagem das 14 tabelas.
 2. `prepare_dbt`: copia o projeto para um diretório exclusivo da execução,
    instala dependências de `packages.yml` quando existirem e roda `dbt debug`.
@@ -53,7 +65,7 @@ use `host.docker.internal` para bancos no host, em vez de `localhost`.
 
 Os arquivos ficam em **Outputs** das tarefas na execução Kestra. Os volumes
 `kestra_postgres` e `kestra_storage` persistem o histórico e os artefatos. As
-dependências Python são instaladas do `dagster/nvdatalake/uv.lock`, com dbt-core
+dependências Python são instaladas do `kestra/uv.lock`, com dbt-core
 1.11.14 e dbt-postgres 1.11.0; a imagem Kestra é fixada em `v1.3.41`.
 O worker executa como usuário `kestra` com Process runner; não monta Docker socket.
 
@@ -96,8 +108,7 @@ Com Docker e uv instalados, na raiz:
 ```
 
 O script constrói a imagem, sobe Kestra e PostgreSQL isolados, testa o fluxo
-real via API, executa a suíte Dagster existente e remove a infraestrutura de
-teste ao terminar. Não lê `.env` nem usa os bancos reais. Reserva as portas
+real via API e remove a infraestrutura de teste ao terminar. Não lê `.env` nem usa os bancos reais. Reserva as portas
 `18082` e `55440` e o projeto Compose `nv-kestra-e2e` para esse teste.
 
 A suíte verifica preservação de tipos de todas as tabelas de origem, inteiros
@@ -106,7 +117,7 @@ origens, dimensão desconhecida com chave 0, municípios deduplicados,
 espelhamento Silver/Gold, agregados mensais, inventário dos 24 modelos,
 artefatos, repetição sem duplicação, falha de ingestão e falha de teste dbt.
 Os testes de chaves, contagem, relacionamentos e paridade adicionados ao
-próprio projeto dbt são executados por ambos os orquestradores.
+próprio projeto dbt são executados pelo `dbt build` do fluxo.
 
 A validação também cobre versões divergentes do mesmo município entre origens.
 `dim_municipio` escolhe uma linha por código IBGE, priorizando a menor

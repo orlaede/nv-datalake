@@ -38,16 +38,11 @@ nv-datalake/
 ├── apps/
 │   ├── api/                    # API HTTP (Express) para consultas e exportações
 │   └── web/                    # Aplicação web (React + Vite) para dashboards e listagens
-├── dagster/
-│   └── nvdatalake/             # Código legado e ambiente Python de ingestão
-│       ├── src/nvdatalake/
-│       │   ├── definitions.py  # Definição principal do Dagster (Assets & Recursos)
-│       │   └── defs/
-│       │       ├── assets.py   # Extração dos dados operacionais -> Bronze
-│       │       ├── dbt_assets.py # Mapeamento dos modelos dbt no Dagster
-│       │       └── dbt_project.py # Configuração da integração Dagster-dbt
-│       ├── pyproject.toml
-│       └── uv.lock
+├── kestra/
+│   ├── flows/materialize_all.yml # Fluxo: origens, ingestão Bronze e dbt
+│   ├── ingest.py               # Carga das origens -> Bronze
+│   ├── pyproject.toml
+│   └── uv.lock
 ├── dbt/
 │   └── nvdatalake/             # Projeto dbt (Transformações Silver & Gold)
 │       ├── models/
@@ -214,16 +209,8 @@ docker compose ps -a
 docker compose logs --tail=30
 ```
 
-O código legado Dagster permanece no repositório, mas seus serviços e o volume
-`dagster_home` não fazem parte do Compose. Remova os contêineres antigos sem
-apagar volumes, caso ainda existam:
-
-```bash
-docker rm -f nv-datalake-nvdatalake-1 nv-datalake-nvdatalake-daemon-1
-```
-
 ## 📊 Camadas de Dados
 
-- **Bronze**: Dados brutos extraídos dos schemas de origem (atualmente `ce_caucaia_amostra` e `ce_quixada` do banco `nvtr` — tabelas: `auto_infracao`, `agente`, `infracao`, `municipio`, `pessoa`, `veiculo`, `erro_consistencia`). Ver [estratégia multi-origem](dagster/nvdatalake/README.md#multi-source-strategy).
+- **Bronze**: Dados brutos extraídos dos schemas de origem (atualmente `ce_caucaia_amostra` e `ce_quixada` do banco `nvtr` — tabelas: `auto_infracao`, `agente`, `infracao`, `municipio`, `pessoa`, `veiculo`, `erro_consistencia`). As origens são declaradas em [`kestra/flows/materialize_all.yml`](kestra/flows/materialize_all.yml).
 - **Silver**: Modelos dimensionais higienizados e relacionados, com surrogate keys (`sk_*`) por dimensão (`dim_agente`, `dim_infracao`, `dim_municipio`, `dim_pessoa`, `dim_veiculo`, `dim_erro_consistencia`, `dim_origem`, `fac_auto_infracao`).
 - **Gold**: Camada de apresentação autocontida: dimensões espelhadas em `gold.*` (incluindo `dim_origem`, derivada do `source_key`) e fatos estrela pura com surrogate keys (`fac_auto_infracao` com as 8 `sk_*` + atributos do auto, `fac_auto_infracao_mensal` com `sk_origem`). Os rótulos e CASEs de apresentação são montados pela API ao joimar as dimensões.
