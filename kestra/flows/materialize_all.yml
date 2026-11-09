@@ -21,11 +21,9 @@ variables:
   dbname: nvtr
   schemas:
     - ce_caucaia_amostra
-    - ce_quixada
     - sc_pomerode
     - sc_bcamboriu
     - pr_curitiba
-    - ba_ilheust
   tables:
     - auto_infracao
     - agente
@@ -34,6 +32,11 @@ variables:
     - pessoa
     - veiculo
     - erro_consistencia
+  # Tabelas que podem não existir em todos os schemas. Se ausente, a ingestão
+  # e o dbt apenas registram um aviso (WARNING) e seguem sem erro.
+  optional_tables:
+    - ait_retorno
+    - codigo_retorno
 
 pluginDefaults:
   - type: io.kestra.plugin.scripts.shell.Commands
@@ -42,12 +45,14 @@ pluginDefaults:
         NVDATALAKE_DBNAME: "{{ vars.dbname }}"
         NVDATALAKE_SCHEMAS: "{{ vars.schemas | json }}"
         NVDATALAKE_TABLES: "{{ vars.tables | json }}"
+        NVDATALAKE_OPTIONAL_TABLES: "{{ vars.optional_tables | json }}"
   - type: io.kestra.plugin.dbt.cli.DbtCLI
     values:
       env:
         NVDATALAKE_DBNAME: "{{ vars.dbname }}"
         NVDATALAKE_SCHEMAS: "{{ vars.schemas | json }}"
         NVDATALAKE_TABLES: "{{ vars.tables | json }}"
+        NVDATALAKE_OPTIONAL_TABLES: "{{ vars.optional_tables | json }}"
 
 tasks:
   - id: pipeline
@@ -61,6 +66,7 @@ tasks:
           - python /opt/nvdatalake/kestra/ingest.py
         outputFiles:
           - ingestion.json
+          - skipped.json
 
       - id: prepare_dbt
         type: io.kestra.plugin.scripts.shell.Commands

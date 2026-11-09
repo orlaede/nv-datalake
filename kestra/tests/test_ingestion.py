@@ -13,9 +13,11 @@ def test_sources_come_from_flow_variables():
 
     flow = yaml.safe_load((Path(__file__).resolve().parents[1] / "flows/materialize_all.yml").read_text())
     variables = flow["variables"]
-    sources = build_sources(variables["dbname"], variables["schemas"], variables["tables"])
+    sources = build_sources(variables["dbname"], variables["schemas"], variables["tables"], variables["optional_tables"])
     assert sources[0].key == "nvtr_ce_caucaia_amostra"
     assert all(source.tables == variables["tables"] for source in sources)
+    assert all(source.optional_tables == ["ait_retorno", "codigo_retorno"] for source in sources)
+    assert not {"ce_quixada", "ba_ilheust"} & set(variables["schemas"])
     assert {source.env_prefix for source in sources} == {"SOURCE_NVTR"}
 
 

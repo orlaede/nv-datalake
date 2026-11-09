@@ -9,7 +9,7 @@ Plataforma de Engenharia de Dados (ELT / Data Lake) para ingestão, estruturaç�
 O projeto adota a **Medallion Architecture** (Bronze, Silver e Gold), separando a orquestração da ingestão das transformações analíticas:
 
 ```text
-              [ Banco Origem: nvtr (schemas ce_caucaia_amostra, ce_quixada, ...) ]
+              [ Banco Origem: nvtr (schemas ce_caucaia_amostra, sc_pomerode, ...) ]
                                             │
                                             ▼ (Kestra EL / SQLAlchemy)
                           [ Data Lake: nvdatalake (schema bronze) ]
@@ -38,19 +38,26 @@ nv-datalake/
 ├── apps/
 │   ├── api/                    # API HTTP (Express) para consultas e exportações
 │   └── web/                    # Aplicação web (React + Vite) para dashboards e listagens
+├── db/
+│   └── migrations/             # Migrações de autenticação (001_*, 002_*)
 ├── kestra/
 │   ├── flows/materialize_all.yml # Fluxo: origens, ingestão Bronze e dbt
+│   ├── tests/                  # Testes de ponta a ponta da integração
+│   ├── Dockerfile              # Imagem Kestra com dbt e dependências Python
+│   ├── README.md
 │   ├── ingest.py               # Carga das origens -> Bronze
 │   ├── pyproject.toml
 │   └── uv.lock
+├── scripts/                    # kestra.py (cliente) e test_kestra.sh
+├── docker-compose.yml
 ├── dbt/
 │   └── nvdatalake/             # Projeto dbt (Transformações Silver & Gold)
 │       ├── models/
-│       │   ├── bronze/         # Staging e mapeamento de fontes (sources)
+│       │   ├── bronze/         # Staging (stg_*) unindo os schemas via macro bronze_union
 │       │   ├── silver/         # Tabelas Fato e Dimensão (dim_*, fac_*)
 │       │   └── gold/           # Visões e agregados analíticos
 │       ├── dbt_project.yml
-│       └── macros/
+│       └── macros/             # bronze_union, data_quality, generate_schema_name
 └── README.md                   # Documentação principal do repositório
 ```
 
@@ -151,8 +158,9 @@ docker compose up -d --build kestra kestra-import
 ```
 
 Acesse **http://localhost:8082**, faça login e execute
-`nvdatalake.materialize_all`. O fluxo contempla as 14 tabelas de origem, todos
-os 24 modelos dbt e seus testes. O cron diário começa desabilitado; habilite o trigger `daily` para agendar as cargas. Para verificar a integração completa em
+`nvdatalake.materialize_all`. O fluxo contempla as 28 tabelas de origem (7 tabelas
+em cada um dos 4 schemas) e as tabelas opcionais `ait_retorno` e `codigo_retorno` (se não existirem em
+um schema, são registradas como aviso no log e ignoradas, sem erro), todos os 32 modelos dbt e seus testes. O cron diário começa desabilitado; habilite o trigger `daily` para agendar as cargas. Para verificar a integração completa em
 bancos isolados, execute `./scripts/test_kestra.sh`. Mais detalhes em
 [kestra/README.md](kestra/README.md).
 
@@ -211,6 +219,6 @@ docker compose logs --tail=30
 
 ## 📊 Camadas de Dados
 
-- **Bronze**: Dados brutos extraídos dos schemas de origem (atualmente `ce_caucaia_amostra` e `ce_quixada` do banco `nvtr` — tabelas: `auto_infracao`, `agente`, `infracao`, `municipio`, `pessoa`, `veiculo`, `erro_consistencia`). As origens são declaradas em [`kestra/flows/materialize_all.yml`](kestra/flows/materialize_all.yml).
+- **Bronze**: Dados brutos extraídos dos schemas de origem (atualmente `ce_caucaia_amostra`, `sc_pomerode`, `sc_bcamboriu` e `pr_curitiba` do banco `nvtr` — tabelas por schema: `auto_infracao`, `agente`, `infracao`, `municipio`, `pessoa`, `veiculo`, `erro_consistencia`; mais as opcionais `ait_retorno` e `codigo_retorno`, ignoradas com aviso se ausentes). As origens são declaradas em [`kestra/flows/materialize_all.yml`](kestra/flows/materialize_all.yml).
 - **Silver**: Modelos dimensionais higienizados e relacionados, com surrogate keys (`sk_*`) por dimensão (`dim_agente`, `dim_infracao`, `dim_municipio`, `dim_pessoa`, `dim_veiculo`, `dim_erro_consistencia`, `dim_origem`, `fac_auto_infracao`).
-- **Gold**: Camada de apresentação autocontida: dimensões espelhadas em `gold.*` (incluindo `dim_origem`, derivada do `source_key`) e fatos estrela pura com surrogate keys (`fac_auto_infracao` com as 8 `sk_*` + atributos do auto, `fac_auto_infracao_mensal` com `sk_origem`). Os rótulos e CASEs de apresentação são montados pela API ao joimar as dimensões.
+- **Gold**: Camada de apresentação autocontida: dimensões espelhadas em `gold.*` (incluindo `dim_origem`, derivada do `source_key`) e fatos estrela pura com surrogate keys (`fac_auto_infracao` com as 8 `sk_*` + atributos do auto, `fac_auto_infracao_mensal` com `sk_origem`). Os rótulos e CASEs de apresentação são montados pela API ao unir as dimensões.

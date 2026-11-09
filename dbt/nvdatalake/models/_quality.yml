@@ -1,5 +1,43 @@
 version: 2
 models:
+- name: stg_ait_retorno
+  description: Retorno de AIT. Tabela opcional; schemas sem ela são ignorados.
+  data_tests:
+  - staging_count:
+      arguments:
+        table_name: ait_retorno
+        optional: true
+  - unique_key:
+      arguments:
+        columns:
+        - source_key
+        - id
+  columns:
+  - name: id
+    data_tests:
+    - not_null
+  - name: source_key
+    data_tests:
+    - not_null
+- name: stg_codigo_retorno
+  description: Códigos de retorno de AIT. Tabela opcional; schemas sem ela são ignorados.
+  data_tests:
+  - staging_count:
+      arguments:
+        table_name: codigo_retorno
+        optional: true
+  - unique_key:
+      arguments:
+        columns:
+        - source_key
+        - id
+  columns:
+  - name: id
+    data_tests:
+    - not_null
+  - name: source_key
+    data_tests:
+    - not_null
 - name: stg_agente
   data_tests:
   - unique_key:
@@ -159,6 +197,66 @@ models:
     data_tests:
     - unique
     - not_null
+- name: dim_auto
+  data_tests:
+  - unique_key:
+      arguments:
+        columns:
+        - source_key
+        - num_auto
+  columns:
+  - name: sk_auto
+    data_tests:
+    - unique
+    - not_null
+- name: dim_codigo_retorno
+  columns:
+  - name: sk_codigo_retorno
+    data_tests:
+    - unique
+    - not_null
+- name: fac_ait_retorno
+  data_tests:
+  - unique_key:
+      arguments:
+        columns:
+        - source_key
+        - id
+  - unique_key:
+      arguments:
+        columns:
+        - source_key
+        - num_auto
+      config:
+        where: num_auto is not null
+  columns:
+  - name: id
+    data_tests:
+    - not_null
+  - name: source_key
+    data_tests:
+    - not_null
+  - name: sk_origem
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_origem')
+          field: sk_origem
+  - name: sk_auto
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_auto')
+          field: sk_auto
+  - name: sk_codigo_retorno
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_codigo_retorno')
+          field: sk_codigo_retorno
 - name: dim_origem
   columns:
   - name: sk_origem
@@ -186,6 +284,13 @@ models:
         arguments:
           to: ref('dim_origem')
           field: sk_origem
+  - name: sk_auto
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_auto')
+          field: sk_auto
   - name: sk_agente
     data_tests:
     - not_null
@@ -270,6 +375,21 @@ models:
   - same_rows:
       arguments:
         compare_model: dim_origem
+- name: dim_auto_gold
+  data_tests:
+  - same_rows:
+      arguments:
+        compare_model: dim_auto
+- name: dim_codigo_retorno_gold
+  data_tests:
+  - same_rows:
+      arguments:
+        compare_model: dim_codigo_retorno
+- name: fac_ait_retorno_gold
+  data_tests:
+  - same_rows:
+      arguments:
+        compare_model: fac_ait_retorno
 - name: fac_auto_infracao_gold
   data_tests:
   - same_rows:

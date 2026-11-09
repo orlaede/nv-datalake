@@ -2,7 +2,7 @@
 
 O Kestra executa o pipeline completo como orquestrador padrão: as tabelas
 de `variables.schemas` e `variables.tables` do fluxo são copiadas para Bronze, depois o projeto dbt
-inteiro é executado com `dbt build` (24 modelos e todos os testes). O projeto
+inteiro é executado com `dbt build` (32 modelos e todos os testes). O projeto
 dbt, `profiles.yml`, macros, aliases, schemas e paths ficam em `dbt/nvdatalake`.
 
 ## Iniciar
@@ -52,10 +52,18 @@ um schema, acrescente-o em `schemas`, inclua o nome de exibição em
 staging unem os schemas com a macro `bronze_union`, que preenche com `null` as
 colunas ausentes em algum schema.
 
+`optional_tables` lista tabelas que podem não existir em todos os schemas
+(hoje `ait_retorno` e `codigo_retorno`). Se faltar em um schema, a ingestão imprime
+`WARNING: optional table <schema>.<tabela> not found ... skipped`, remove a
+cópia Bronze antiga dessa tabela e segue sem erro; `bronze_union(..., optional=true)`
+também registra um aviso e ignora o schema. Se nenhum schema tiver a tabela, o
+modelo de staging fica vazio (tipado por `empty_columns`), assim Silver e Gold seguem compilando. As tabelas ausentes são listadas em `skipped.json`.
+
 ## Fluxo e artefatos
 
 1. `ingest_bronze`: carrega as origens de `variables.schemas`, preservando tipos
-   PostgreSQL, e salva `ingestion.json` com a contagem das 14 tabelas.
+   PostgreSQL, e salva `ingestion.json` com a contagem das tabelas carregadas e
+   `skipped.json` com as tabelas opcionais ausentes.
 2. `prepare_dbt`: copia o projeto para um diretório exclusivo da execução,
    instala dependências de `packages.yml` quando existirem e roda `dbt debug`.
 3. `build_dbt`: executa `dbt build`, incluindo todos os modelos, testes,
@@ -114,7 +122,7 @@ real via API e remove a infraestrutura de teste ao terminar. Não lê `.env` nem
 A suíte verifica preservação de tipos de todas as tabelas de origem, inteiros
 nullable, URLs com senha especial, staging, schema drift, IDs iguais entre
 origens, dimensão desconhecida com chave 0, municípios deduplicados,
-espelhamento Silver/Gold, agregados mensais, inventário dos 24 modelos,
+espelhamento Silver/Gold, agregados mensais, tabela opcional ausente, inventário dos 32 modelos,
 artefatos, repetição sem duplicação, falha de ingestão e falha de teste dbt.
 Os testes de chaves, contagem, relacionamentos e paridade adicionados ao
 próprio projeto dbt são executados pelo `dbt build` do fluxo.

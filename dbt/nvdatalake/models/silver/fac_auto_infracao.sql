@@ -1,6 +1,7 @@
 select
     f.source_key,
     coalesce(origem.sk_origem, 0) as sk_origem,
+    coalesce(auto_dim.sk_auto, 0) as sk_auto,
     f.id,
     f.android_serial,
     f.data_hora_fim,
@@ -51,5 +52,7 @@ left join {{ ref('dim_veiculo') }} veiculo
     on f.source_key = veiculo.source_key and f.veiculo_id = veiculo.id
 left join {{ ref('dim_erro_consistencia') }} erro
     on f.source_key = erro.source_key and f.erro_consistencia_id = erro.id
+left join {{ ref('dim_auto') }} auto_dim
+    on f.source_key = auto_dim.source_key and nullif(trim(f.num_auto), '') = auto_dim.num_auto
 left join {{ ref('dim_origem') }} origem
     on f.source_key = origem.source_key
