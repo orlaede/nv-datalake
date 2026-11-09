@@ -2,9 +2,10 @@
 import json
 import os
 from dataclasses import dataclass, field
+from datetime import date
 
 import pandas as pd
-from sqlalchemy import URL, MetaData, Table, create_engine, inspect, text
+from sqlalchemy import URL, MetaData, Table, create_engine, exists, func, inspect, select, text
 from sqlalchemy.engine import make_url
 
 
@@ -60,11 +61,49 @@ def database_url(prefix: str, default_dbname: str) -> URL:
     )
 
 
-def load_bronze_table(source: Source, table_name: str, source_engine, datalake_db) -> int:
-    """Replace one Bronze table, preserving the source's PostgreSQL column types."""
+def data_inicial_autos(datalake_db, source_key: str) -> tuple[date, str]:
+    """Start date for autos from config.parametro: the origin's data_inicial_autos, else the
+    global data_inicial_padrao (source_key '*'). Fails when none is configured, so a missing
+    migration never loads every auto."""
+    if not inspect(datalake_db).has_table("parametro", schema="config"):
+        raise RuntimeError("config.parametro not found: apply db/migrations/003_config_parametros.sql")
+    with datalake_db.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT source_key, chave, valor FROM config.parametro "
+                "WHERE (source_key = :key AND chave = 'data_inicial_autos') "
+                "OR (source_key = '*' AND chave = 'data_inicial_padrao')"
+            ),
+            {"key": source_key},
+        ).all()
+    values = {chave: valor for _, chave, valor in rows}
+    if "data_inicial_autos" in values:
+        return date.fromisoformat(values["data_inicial_autos"]), "origem"
+    if "data_inicial_padrao" in values:
+        return date.fromisoformat(values["data_inicial_padrao"]), "padrão"
+    raise RuntimeError("data_inicial_padrao not set in config.parametro (source_key '*')")
+
+
+def load_bronze_table(source: Source, table_name: str, source_engine, datalake_db, data_inicial: date | None = None) -> int:
+    """Replace one Bronze table, preserving the source's PostgreSQL column types.
+
+    With `data_inicial`, auto_infracao keeps only autos with data_hora >= data_inicial and
+    ait_retorno only the returns of those autos (matched by trimmed num_auto).
+    """
     source_table = Table(table_name, MetaData(), schema=source.schema, autoload_with=source_engine)
+    query = source_table.select()
+    if data_inicial and table_name == "auto_infracao":
+        query = query.where(source_table.c.data_hora >= data_inicial)
+    elif data_inicial and table_name == "ait_retorno":
+        autos = Table("auto_infracao", MetaData(), schema=source.schema, autoload_with=source_engine)
+        query = query.where(
+            exists(select(1).where(
+                func.nullif(func.trim(autos.c.num_auto), "") == func.nullif(func.trim(source_table.c.num_auto), ""),
+                autos.c.data_hora >= data_inicial,
+            ))
+        )
     with source_engine.connect() as conn:
-        df = pd.read_sql_query(source_table.select(), conn)
+        df = pd.read_sql_query(query, conn)
     dtype = {column.name: column.type for column in source_table.columns}
 
     with datalake_db.begin() as conn:
@@ -98,17 +137,19 @@ def main():
     try:
         for source in sources_from_env():
             engine = create_engine(database_url(source.env_prefix, source.dbname), connect_args=connect_args)
+            inicial, origem = data_inicial_autos(destination, source.key)
+            print(f"{source.key}: autos desde {inicial} ({origem})", flush=True)
             try:
                 for table_name in source.tables:
                     name = f"{source.key}__{table_name}"
-                    counts[name] = load_bronze_table(source, table_name, engine, destination)
+                    counts[name] = load_bronze_table(source, table_name, engine, destination, inicial)
                     print(f"bronze.{name}: {counts[name]} rows", flush=True)
                 for table_name in source.optional_tables:
                     if not inspect(engine).has_table(table_name, schema=source.schema):
                         skipped.append(skip_missing_table(source, table_name, destination))
                         continue
                     name = f"{source.key}__{table_name}"
-                    counts[name] = load_bronze_table(source, table_name, engine, destination)
+                    counts[name] = load_bronze_table(source, table_name, engine, destination, inicial)
                     print(f"bronze.{name}: {counts[name]} rows", flush=True)
             finally:
                 engine.dispose()

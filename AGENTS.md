@@ -71,7 +71,27 @@ nvtr (schemas regionais) --Kestra/ingest.py--> nvdatalake.bronze --dbt--> silver
   `fac_ait_retorno` `num_auto` **repete** (um auto pode ser processado mais de uma
   vez; ex.: até 5 retornos por auto); a chave do fato é `(source_key, id)`.
   Retorno sem auto vai para `0`.
+- **`num_dias`:** métrica em `fac_auto_infracao` e `fac_ait_retorno` (Silver/Gold) =
+  dias entre `data_hora` do auto e a data da execução do dbt (`America/Sao_Paulo`).
+  Em `fac_ait_retorno` vem do auto ligado por `sk_auto`; retorno órfão fica nulo.
   Não use testes dbt `severity: warn`: o fluxo termina `WARNING` e a CLI trata como falha.
+- **Parâmetros:** `config.parametro` (chave/valor; PK `(source_key, chave)`,
+  `atualizado_em`) vive no schema `config`, criado pela migração manual
+  `003_config_parametros.sql`, fora do pipeline (bronze/silver/gold são
+  recriados). `source_key` é a origem (`nvtr_sc_pomerode`) ou `'*'` (todas; o valor
+  da origem sobrescreve). Chaves (validadas por CHECK): `data_inicial_padrao`
+  (só `'*'`), `data_inicial_autos`, `tipo_envio_processamento`,
+  `receptor_processamento`, `num_dias_retencao_processamento`. O dbt pivota em
+  `dim_parametro_origem` (1 linha por origem; sem valor = nulo). Aplique a 003
+  **antes** do fluxo; sem ela a ingestão falha. Compare `num_dias` dos fatos com
+  `num_dias_retencao_processamento`.
+- **Data inicial dos autos:** a ingestão só lê `auto_infracao` com
+  `data_hora >= data inicial` e `ait_retorno` cujo auto (`num_auto` com `trim`)
+  está nessa faixa (retorno órfão não é ingerido; auto com `data_hora` nulo
+  também fica fora). Data = `data_inicial_autos` da origem, senão
+  `data_inicial_padrao` (`'*'`, semeada com `2026-01-01` pela migração). Sem a
+  tabela ou sem data, a ingestão falha (nunca carrega tudo). Full-replace:
+  mudar a data exige reexecutar o fluxo.
 - **Gold:** camada autocontida. Dimensões espelhadas (`*_gold`) e fatos estrela
   (`fac_auto_infracao`, `fac_auto_infracao_mensal`). Rótulos e CASEs de
   apresentação ficam na API, não no dbt.
@@ -110,7 +130,7 @@ isoladamente.
 ## Convenções para mudanças
 
 - Mudou o conjunto de origens, tabelas ou modelos? Atualize: o fluxo, `dim_origem.sql`,
-  `kestra/tests/` (fixtures e asserções, incluindo o inventário de 32 modelos) e
+  `kestra/tests/` (fixtures e asserções, incluindo o inventário de 34 modelos) e
   os READMEs (contagens de schemas, tabelas e modelos).
 - Novo modelo dbt: adicione testes em `_quality.yml` ou `tests/`; eles rodam no
   `dbt build` do fluxo.

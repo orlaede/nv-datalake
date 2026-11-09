@@ -2,7 +2,7 @@
 
 O Kestra executa o pipeline completo como orquestrador padrão: as tabelas
 de `variables.schemas` e `variables.tables` do fluxo são copiadas para Bronze, depois o projeto dbt
-inteiro é executado com `dbt build` (32 modelos e todos os testes). O projeto
+inteiro é executado com `dbt build` (34 modelos e todos os testes). O projeto
 dbt, `profiles.yml`, macros, aliases, schemas e paths ficam em `dbt/nvdatalake`.
 
 ## Iniciar
@@ -58,6 +58,15 @@ colunas ausentes em algum schema.
 cópia Bronze antiga dessa tabela e segue sem erro; `bronze_union(..., optional=true)`
 também registra um aviso e ignora o schema. Se nenhum schema tiver a tabela, o
 modelo de staging fica vazio (tipado por `empty_columns`), assim Silver e Gold seguem compilando. As tabelas ausentes são listadas em `skipped.json`.
+
+## Data inicial dos autos
+
+A data vem de `config.parametro` (chave/valor; migração
+`db/migrations/003_config_parametros.sql`, aplicada manualmente): `data_inicial_autos`
+da origem, senão `data_inicial_padrao` com `source_key '*'` (a migração semeia
+`2026-01-01`). Só entram `auto_infracao` com `data_hora >=` a data e os
+`ait_retorno` desses autos. Sem a tabela ou sem data a ingestão falha. A carga é
+*full-replace*, então reexecute o fluxo após mudar a data.
 
 ## Fluxo e artefatos
 
@@ -122,7 +131,7 @@ real via API e remove a infraestrutura de teste ao terminar. Não lê `.env` nem
 A suíte verifica preservação de tipos de todas as tabelas de origem, inteiros
 nullable, URLs com senha especial, staging, schema drift, IDs iguais entre
 origens, dimensão desconhecida com chave 0, municípios deduplicados,
-espelhamento Silver/Gold, agregados mensais, tabela opcional ausente, inventário dos 32 modelos,
+espelhamento Silver/Gold, agregados mensais, tabela opcional ausente, inventário dos 34 modelos,
 artefatos, repetição sem duplicação, falha de ingestão e falha de teste dbt.
 Os testes de chaves, contagem, relacionamentos e paridade adicionados ao
 próprio projeto dbt são executados pelo `dbt build` do fluxo.

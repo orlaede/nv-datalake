@@ -110,7 +110,8 @@ Aplique as migrações no Data Lake, nesta ordem (elas são idempotentes):
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f db/migrations/001_auth_schema.sql \
-  -f db/migrations/002_auth_seed.sql
+  -f db/migrations/002_auth_seed.sql \
+  -f db/migrations/003_config_parametros.sql
 ```
 
 Se `DATABASE_URL` não for usado, monte a conexão com as variáveis
@@ -160,7 +161,7 @@ docker compose up -d --build kestra kestra-import
 Acesse **http://localhost:8082**, faça login e execute
 `nvdatalake.materialize_all`. O fluxo contempla as 42 tabelas de origem (7 tabelas
 em cada um dos 6 schemas) e as tabelas opcionais `ait_retorno` e `codigo_retorno` (se não existirem em
-um schema, são registradas como aviso no log e ignoradas, sem erro), todos os 32 modelos dbt e seus testes. O cron diário começa desabilitado; habilite o trigger `daily` para agendar as cargas. Para verificar a integração completa em
+um schema, são registradas como aviso no log e ignoradas, sem erro), todos os 34 modelos dbt e seus testes. A ingestão lê autos a partir de `data_inicial_padrao` (`2026-01-01`), configurável por origem na tabela chave/valor `config.parametro` (migração 003). O cron diário começa desabilitado; habilite o trigger `daily` para agendar as cargas. Para verificar a integração completa em
 bancos isolados, execute `./scripts/test_kestra.sh`. Mais detalhes em
 [kestra/README.md](kestra/README.md).
 
@@ -220,5 +221,5 @@ docker compose logs --tail=30
 ## 📊 Camadas de Dados
 
 - **Bronze**: Dados brutos extraídos dos schemas de origem (atualmente `ce_caucaia_amostra`, `sc_pomerode`, `sc_bcamboriu`, `sc_brusquet`, `sc_criciumat` e `pr_curitiba` do banco `nvtr` — tabelas por schema: `auto_infracao`, `agente`, `infracao`, `municipio`, `pessoa`, `veiculo`, `erro_consistencia`; mais as opcionais `ait_retorno` e `codigo_retorno`, ignoradas com aviso se ausentes). As origens são declaradas em [`kestra/flows/materialize_all.yml`](kestra/flows/materialize_all.yml).
-- **Silver**: Modelos dimensionais higienizados e relacionados, com surrogate keys (`sk_*`) por dimensão (`dim_agente`, `dim_infracao`, `dim_municipio`, `dim_pessoa`, `dim_veiculo`, `dim_erro_consistencia`, `dim_origem`, `fac_auto_infracao`).
+- **Silver**: Modelos dimensionais higienizados e relacionados, com surrogate keys (`sk_*`) por dimensão (`dim_agente`, `dim_infracao`, `dim_municipio`, `dim_pessoa`, `dim_veiculo`, `dim_erro_consistencia`, `dim_origem`, `dim_parametro_origem`, `fac_auto_infracao`).
 - **Gold**: Camada de apresentação autocontida: dimensões espelhadas em `gold.*` (incluindo `dim_origem`, derivada do `source_key`) e fatos estrela pura com surrogate keys (`fac_auto_infracao` com as 8 `sk_*` + atributos do auto, `fac_auto_infracao_mensal` com `sk_origem`). Os rótulos e CASEs de apresentação são montados pela API ao unir as dimensões.

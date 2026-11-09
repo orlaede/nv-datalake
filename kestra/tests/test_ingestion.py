@@ -17,6 +17,7 @@ def test_sources_come_from_flow_variables():
     assert sources[0].key == "nvtr_ce_caucaia_amostra"
     assert all(source.tables == variables["tables"] for source in sources)
     assert all(source.optional_tables == ["ait_retorno", "codigo_retorno"] for source in sources)
+    assert "data_inicial_padrao" not in variables  # lives in config.parametro
     assert not {"ce_quixada", "ba_ilheust"} & set(variables["schemas"])
     assert {source.env_prefix for source in sources} == {"SOURCE_NVTR"}
 

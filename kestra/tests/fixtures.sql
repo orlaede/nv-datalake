@@ -90,8 +90,9 @@ BEGIN
             VALUES
             (1, %L, 1, 1, 1, 1, 2304400, 10, 1, '2026-01-10 10:00', 1),
             (2, %L, 1, 1, 1, 1, 2304400, 10, 1, '2026-01-20 11:00', 1),
-            (3, %L, 999, NULL, 999, 999, 999, NULL, 999, '2026-02-05 12:00', NULL)$q$,
-            s, l || '1', l || '2', l || '3');
+            (3, %L, 999, NULL, 999, 999, 999, NULL, 999, '2026-02-05 12:00', NULL),
+            (4, %L, 1, 1, 1, 1, 2304400, 10, 1, '2025-12-31 12:00', 1)$q$,
+            s, l || '1', l || '2', l || '3', l || '4');
     END LOOP;
 END $$;
 
@@ -116,5 +117,7 @@ CREATE TABLE pr_curitiba.codigo_retorno (id bigint PRIMARY KEY, codigo_retorno b
 CREATE TABLE pr_curitiba.ait_retorno (id bigint PRIMARY KEY, num_auto varchar(255), codigo_retorno bigint REFERENCES pr_curitiba.codigo_retorno(id));
 INSERT INTO pr_curitiba.codigo_retorno VALUES (1, 200, 'Rejeitado', false);
 -- num_auto repeats ('Curitiba1' twice): an auto may be processed more than once.
+-- Auto 4 of every schema is dated 2025-12-31 (before the default start date): it and its
+-- return ('Curitiba4') are not ingested; 'ORFAO' has no auto and is not ingested either.
 -- ' Curitiba2 ' only links to its auto if num_auto is trimmed; 'ORFAO' has no auto (sk_auto = 0).
-INSERT INTO pr_curitiba.ait_retorno VALUES (1, 'Curitiba1', 1), (2, ' Curitiba2 ', 1), (3, 'ORFAO', NULL), (4, 'Curitiba1', 1);
+INSERT INTO pr_curitiba.ait_retorno VALUES (1, 'Curitiba1', 1), (2, ' Curitiba2 ', 1), (3, 'ORFAO', NULL), (4, 'Curitiba1', 1), (5, 'Curitiba4', 1);

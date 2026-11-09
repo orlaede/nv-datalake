@@ -36,7 +36,8 @@ select
     f.longitude,
     f.arquivo_ftp_id,
     f.motivo_nao_abordagem,
-    f.motivo_cancelamento
+    f.motivo_cancelamento,
+    (timezone('America/Sao_Paulo', now())::date - f.data_hora::date) as num_dias
 from {{ ref('stg_auto_infracao') }} f
 left join {{ ref('dim_agente') }} agente
     on f.source_key = agente.source_key and f.agente_id = agente.id

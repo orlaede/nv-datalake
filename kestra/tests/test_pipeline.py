@@ -1,13 +1,16 @@
 """Run against the dedicated Compose stack, never the project's .env databases."""
+from datetime import date, datetime
 import json
 import os
 from pathlib import Path
 import subprocess
+from zoneinfo import ZoneInfo
 from urllib.parse import quote
 
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import DBAPIError
 
 import yaml
 
@@ -38,8 +41,22 @@ def databases():
             conn.execute(text(f"DROP SCHEMA IF EXISTS {config.schema} CASCADE"))
         conn.execute(text((ROOT / "kestra/tests/fixtures.sql").read_text()))
     with destination.begin() as conn:
-        for schema in ["bronze", "silver", "gold"]:
+        for schema in ["bronze", "silver", "gold", "config"]:
             conn.execute(text(f"DROP SCHEMA IF EXISTS {schema} CASCADE"))
+        # The config schema is owned by a manual migration, not by the pipeline.
+        migration = text((ROOT / "db/migrations/003_config_parametros.sql").read_text())
+        conn.execute(migration)
+        conn.execute(migration)  # idempotent
+        conn.execute(text("""INSERT INTO config.parametro (source_key, chave, valor) VALUES
+            ('nvtr_sc_pomerode', 'tipo_envio_processamento', 'FTP'),
+            ('nvtr_sc_pomerode', 'receptor_processamento', 'Receptor Pomerode'),
+            ('nvtr_sc_pomerode', 'num_dias_retencao_processamento', '15'),
+            ('nvtr_pr_curitiba', 'tipo_envio_processamento', 'API'),
+            ('nvtr_pr_curitiba', 'receptor_processamento', 'Receptor Curitiba'),
+            ('nvtr_pr_curitiba', 'num_dias_retencao_processamento', '0'),
+            ('nvtr_sc_brusquet', 'data_inicial_autos', '2025-12-01'),
+            ('*', 'num_dias_retencao_processamento', '7'),
+            ('nvtr_inexistente', 'tipo_envio_processamento', 'X')"""))
     yield source, destination
     for engine in engines:
         engine.dispose()
@@ -74,7 +91,7 @@ def test_all_models_tests_profiles_and_artifacts(execution, client):
     results = read_artifact(client, execution, "build_dbt", "run_results.json")
     catalog = read_artifact(client, execution, "docs_dbt", "catalog.json")
     models = {key: node for key, node in manifest["nodes"].items() if node["resource_type"] == "model"}
-    assert len(models) == 32
+    assert len(models) == 34
     assert set(models) == {row["unique_id"] for row in results["results"] if row["unique_id"].startswith("model.")}
     tests = {key for key, node in manifest["nodes"].items() if node["resource_type"] == "test"}
     assert tests == {row["unique_id"] for row in results["results"] if row["unique_id"].startswith("test.")}
@@ -97,7 +114,7 @@ def test_all_bronze_sources_types_and_staging(execution, databases, client):
     with source.connect() as src, destination.connect() as dst:
         for config in SOURCES:
             for table in LOADED_TABLES[config.key]:
-                expected = {"auto_infracao": 3}.get(table, {"nvtr_sc_pomerode": 2, "nvtr_pr_curitiba": 4}[config.key] if table == "ait_retorno" else 1)
+                expected = {"auto_infracao": 4 if config.key == "nvtr_sc_brusquet" else 3}.get(table, {"nvtr_sc_pomerode": 2, "nvtr_pr_curitiba": 3}[config.key] if table == "ait_retorno" else 1)
                 assert report[f"{config.key}__{table}"] == expected
                 assert dst.execute(text(f"SELECT count(*) FROM bronze.{config.key}__{table}")).scalar() == expected
                 assert dst.execute(text(f"SELECT count(*) FROM bronze.stg_{table} WHERE source_key=:key"), {"key": config.key}).scalar() == expected
@@ -119,7 +136,7 @@ def test_optional_tables_missing_are_skipped_not_failed(execution, databases, cl
     assert sorted(skipped) == sorted(f"{key}__{table}" for key in absent for table in _VARIABLES["optional_tables"])
     with destination.connect() as dst:
         for table in _VARIABLES["optional_tables"]:
-            assert dst.execute(text(f"SELECT count(*) FROM bronze.stg_{table}")).scalar() == (6 if table == "ait_retorno" else 2)
+            assert dst.execute(text(f"SELECT count(*) FROM bronze.stg_{table}")).scalar() == (5 if table == "ait_retorno" else 2)
             for key in absent:
                 assert dst.execute(text("SELECT count(*) FROM information_schema.tables WHERE table_schema='bronze' AND table_name=:t"), {"t": f"{key}__{table}"}).scalar() == 0
 
@@ -136,7 +153,6 @@ def test_codigo_retorno_dimension_and_ait_retorno_fact(execution, databases):
         assert rows == [
             ("nvtr_pr_curitiba", 1, "Curitiba1", "Rejeitado", "Curitiba"),
             ("nvtr_pr_curitiba", 2, "Curitiba2", "Rejeitado", "Curitiba"),
-            ("nvtr_pr_curitiba", 3, "ORFAO", "Não Informado", "Curitiba"),
             ("nvtr_pr_curitiba", 4, "Curitiba1", "Rejeitado", "Curitiba"),
             ("nvtr_sc_pomerode", 1, "Pomerode1", "Aceito", "Pomerode"),
             ("nvtr_sc_pomerode", 2, "Pomerode2", "Não Informado", "Pomerode"),
@@ -144,8 +160,14 @@ def test_codigo_retorno_dimension_and_ait_retorno_fact(execution, databases):
         # sk_auto links both facts through dim_auto (business key source_key + trimmed num_auto).
         linked = conn.execute(text("SELECT r.source_key, r.id, a.id FROM silver.fac_ait_retorno r JOIN silver.fac_auto_infracao a USING (sk_auto) WHERE r.sk_auto > 0 ORDER BY r.source_key, r.id")).all()
         assert linked == [("nvtr_pr_curitiba", 1, 1), ("nvtr_pr_curitiba", 2, 2), ("nvtr_pr_curitiba", 4, 1), ("nvtr_sc_pomerode", 1, 1), ("nvtr_sc_pomerode", 2, 2)]
-        assert conn.execute(text("SELECT source_key, id FROM silver.fac_ait_retorno WHERE sk_auto = 0")).all() == [("nvtr_pr_curitiba", 3)]
+        assert conn.execute(text("SELECT source_key, id FROM silver.fac_ait_retorno WHERE sk_auto = 0")).all() == []
         assert conn.execute(text("SELECT count(*) FROM silver.fac_auto_infracao WHERE sk_auto = 0")).scalar() == 0
+        # num_dias = days from the auto's data_hora to the dbt run date (America/Sao_Paulo); orphan return has none.
+        today = datetime.now(ZoneInfo("America/Sao_Paulo")).date()
+        days = {i: (today - d).days for i, d in {1: date(2026, 1, 10), 2: date(2026, 1, 20), 3: date(2026, 2, 5)}.items()}
+        for layer in ("silver", "gold"):
+            assert conn.execute(text(f"SELECT id, num_dias FROM {layer}.fac_auto_infracao WHERE source_key='nvtr_pr_curitiba' ORDER BY id")).all() == list(days.items())
+            assert conn.execute(text(f"SELECT id, num_dias FROM {layer}.fac_ait_retorno WHERE source_key='nvtr_pr_curitiba' ORDER BY id")).all() == [(1, days[1]), (2, days[2]), (4, days[1])]
         for name in ["dim_codigo_retorno", "fac_ait_retorno"]:
             sql = f"(SELECT * FROM silver.{name} EXCEPT ALL SELECT * FROM gold.{name}) UNION ALL (SELECT * FROM gold.{name} EXCEPT ALL SELECT * FROM silver.{name})"
             assert conn.execute(text(sql)).all() == []
@@ -156,7 +178,7 @@ def test_dimensions_and_fact_resolution(execution, databases):
     _, destination = databases
     with destination.connect() as conn:
         for dim in DIMENSIONS:
-            expected = {"municipio": 2, "origem": len(SOURCES), "auto": 3 * len(SOURCES) + 1}.get(dim, len(SOURCES) + 1)
+            expected = {"municipio": 2, "origem": len(SOURCES), "auto": 3 * len(SOURCES) + 2}.get(dim, len(SOURCES) + 1)
             assert conn.execute(text(f"SELECT count(*) FROM silver.dim_{dim}")).scalar() == expected
             if dim != "origem":
                 assert conn.execute(text(f"SELECT count(*) FROM silver.dim_{dim} WHERE sk_{dim}=0")).scalar() == 1
@@ -182,6 +204,41 @@ def test_dimensions_and_fact_resolution(execution, databases):
         ]
 
 
+def test_data_inicial_filters_autos_and_their_returns(execution, databases):
+    _, destination = databases
+    with destination.connect() as conn:
+        old = dict(conn.execute(text("SELECT source_key, count(*) FROM bronze.stg_auto_infracao WHERE data_hora < '2026-01-01' GROUP BY 1")).all())
+        assert old == {"nvtr_sc_brusquet": 1}  # only the origin whose config.parametro_origem moves the start date back
+        assert conn.execute(text("SELECT num_auto FROM bronze.stg_ait_retorno WHERE num_auto IN ('ORFAO', 'Curitiba4')")).all() == []
+        assert conn.execute(text("SELECT data_inicial_autos FROM silver.dim_parametro_origem WHERE source_key='nvtr_sc_brusquet'")).scalar().isoformat() == "2025-12-01"
+
+
+def test_parametro_origem_dimension(execution, databases):
+    _, destination = databases
+    with destination.connect() as conn:
+        for layer in ("silver", "gold"):
+            rows = conn.execute(text(f"SELECT source_key, tipo_envio_processamento, receptor_processamento, num_dias_retencao_processamento, data_inicial_autos FROM {layer}.dim_parametro_origem ORDER BY source_key")).all()
+            assert len(rows) == len(SOURCES)  # one per origin; orphan config row is ignored
+            by_key = {row[0]: row[1:] for row in rows}
+            padrao, brusquet = date(2026, 1, 1), date(2025, 12, 1)
+            assert by_key["nvtr_sc_pomerode"] == ("FTP", "Receptor Pomerode", 15, padrao)
+            assert by_key["nvtr_pr_curitiba"] == ("API", "Receptor Curitiba", 0, padrao)
+            assert by_key["nvtr_sc_bcamboriu"] == (None, None, 7, padrao)  # no own values: '*' fallback
+            assert by_key["nvtr_sc_brusquet"] == (None, None, 7, brusquet)  # own data_inicial_autos wins
+            assert "nvtr_inexistente" not in by_key
+        # Parameters compare with num_dias: autos still inside the retention window.
+        assert conn.execute(text("SELECT count(*) FROM silver.fac_auto_infracao f JOIN silver.dim_parametro_origem p USING (sk_origem) WHERE f.num_dias <= p.num_dias_retencao_processamento")).scalar() == 0
+    invalid = [
+        "('nvtr_sc_pomerode', 'chave_inexistente', 'x')",
+        "('nvtr_sc_pomerode', 'data_inicial_autos', '01/01/2026')",
+        "('nvtr_sc_pomerode', 'num_dias_retencao_processamento', '-1')",
+        "('nvtr_sc_pomerode', 'data_inicial_padrao', '2026-01-01')",  # global key only for '*'
+    ]
+    for values in invalid:
+        with pytest.raises(DBAPIError), destination.begin() as conn:
+            conn.execute(text(f"INSERT INTO config.parametro (source_key, chave, valor) VALUES {values}"))
+
+
 def test_gold_mirrors_and_monthly_totals(execution, databases):
     _, destination = databases
     with destination.connect() as conn:
@@ -190,7 +247,7 @@ def test_gold_mirrors_and_monthly_totals(execution, databases):
             assert conn.execute(text(sql)).all() == []
         rows = conn.execute(text("SELECT to_char(mes, 'YYYY-MM'), sk_origem, total_autos FROM gold.fac_auto_infracao_mensal ORDER BY mes, sk_origem")).all()
         origens = range(1, len(SOURCES) + 1)
-        assert rows == [("2026-01", sk, 2) for sk in origens] + [("2026-02", sk, 1) for sk in origens]
+        assert rows == [("2025-12", 4, 1)] + [("2026-01", sk, 2) for sk in origens] + [("2026-02", sk, 1) for sk in origens]
 
 
 def test_repeat_execution_is_idempotent(execution, client, databases):
@@ -198,8 +255,8 @@ def test_repeat_execution_is_idempotent(execution, client, databases):
     assert second["state"]["current"] == "SUCCESS"
     _, destination = databases
     with destination.connect() as conn:
-        assert conn.execute(text("SELECT count(*) FROM gold.fac_auto_infracao")).scalar() == 3 * len(SOURCES)
-        assert conn.execute(text("SELECT sum(total_autos) FROM gold.fac_auto_infracao_mensal")).scalar() == 3 * len(SOURCES)
+        assert conn.execute(text("SELECT count(*) FROM gold.fac_auto_infracao")).scalar() == 3 * len(SOURCES) + 1
+        assert conn.execute(text("SELECT sum(total_autos) FROM gold.fac_auto_infracao_mensal")).scalar() == 3 * len(SOURCES) + 1
 
 
 def test_history_and_artifacts_survive_restart(execution, client):
@@ -230,7 +287,7 @@ def test_ingestion_failure_prevents_dbt(execution, client, databases):
 def test_dbt_quality_failure_fails_flow(execution, client, databases):
     source, _ = databases
     with source.begin() as conn:
-        conn.execute(text("INSERT INTO ce_caucaia_amostra.auto_infracao (id, num_auto) VALUES (1, 'DUPLICATE')"))
+        conn.execute(text("INSERT INTO ce_caucaia_amostra.auto_infracao (id, num_auto, data_hora) VALUES (1, 'DUPLICATE', '2026-03-01')"))
     try:
         execution_id = client.execute()["id"]
         with pytest.raises(RuntimeError, match="FAILED"):

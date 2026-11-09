@@ -250,6 +250,16 @@ models:
         arguments:
           to: ref('dim_codigo_retorno')
           field: sk_codigo_retorno
+- name: dim_parametro_origem
+  columns:
+  - name: sk_origem
+    data_tests:
+    - unique
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_origem')
+          field: sk_origem
 - name: dim_origem
   columns:
   - name: sk_origem
@@ -373,6 +383,11 @@ models:
   - same_rows:
       arguments:
         compare_model: dim_auto
+- name: dim_parametro_origem_gold
+  data_tests:
+  - same_rows:
+      arguments:
+        compare_model: dim_parametro_origem
 - name: dim_codigo_retorno_gold
   data_tests:
   - same_rows:
