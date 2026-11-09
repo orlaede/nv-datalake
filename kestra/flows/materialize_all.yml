@@ -23,6 +23,8 @@ variables:
     - ce_caucaia_amostra
     - sc_pomerode
     - sc_bcamboriu
+    - sc_brusquet
+    - sc_criciumat
     - pr_curitiba
   tables:
     - auto_infracao

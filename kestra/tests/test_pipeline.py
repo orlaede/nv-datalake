@@ -165,6 +165,8 @@ def test_dimensions_and_fact_resolution(execution, databases):
             ("nvtr_ce_caucaia_amostra", "Agente Caucaia", "Ana", "AAA0001"),
             ("nvtr_pr_curitiba", "Agente Curitiba", "Pessoa Curitiba", "CUR0001"),
             ("nvtr_sc_bcamboriu", "Agente Bcamboriu", "Pessoa Bcamboriu", "BCA0001"),
+            ("nvtr_sc_brusquet", "Agente Brusquet", "Pessoa Brusquet", "BRU0001"),
+            ("nvtr_sc_criciumat", "Agente Criciumat", "Pessoa Criciumat", "CRI0001"),
             ("nvtr_sc_pomerode", "Agente Pomerode", "Pessoa Pomerode", "POM0001"),
         ]
         keys = "sk_agente, sk_condutor, sk_infracao, sk_infrator, sk_municipio, sk_veiculo, sk_erro_consistencia"
@@ -173,6 +175,8 @@ def test_dimensions_and_fact_resolution(execution, databases):
             ("nvtr_ce_caucaia_amostra", "Caucaia (Amostra)"),
             ("nvtr_pr_curitiba", "Curitiba"),
             ("nvtr_sc_bcamboriu", "Balneário Camboriú"),
+            ("nvtr_sc_brusquet", "Brusque"),
+            ("nvtr_sc_criciumat", "Criciúma"),
             ("nvtr_sc_pomerode", "Pomerode"),
         ]
 

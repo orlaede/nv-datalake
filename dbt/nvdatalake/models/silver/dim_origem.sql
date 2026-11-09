@@ -10,6 +10,8 @@ select
         when 'nvtr_ce_caucaia_amostra' then 'Caucaia (Amostra)'
         when 'nvtr_sc_pomerode' then 'Pomerode'
         when 'nvtr_sc_bcamboriu' then 'Balneário Camboriú'
+        when 'nvtr_sc_brusquet' then 'Brusque'
+        when 'nvtr_sc_criciumat' then 'Criciúma'
         when 'nvtr_pr_curitiba' then 'Curitiba'
         else source_key
     end as nome

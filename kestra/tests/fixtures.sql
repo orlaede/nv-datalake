@@ -2,6 +2,8 @@
 CREATE SCHEMA ce_caucaia_amostra;
 CREATE SCHEMA sc_pomerode;
 CREATE SCHEMA sc_bcamboriu;
+CREATE SCHEMA sc_brusquet;
+CREATE SCHEMA sc_criciumat;
 CREATE SCHEMA pr_curitiba;
 
 CREATE TABLE ce_caucaia_amostra.agente (
@@ -64,13 +66,13 @@ VALUES
 -- Remaining schemas mirror ce_caucaia_amostra, then drift like the real sources.
 DO $$
 DECLARE
-    schemas text[] = ARRAY['sc_pomerode', 'sc_bcamboriu', 'pr_curitiba'];
-    labels text[] = ARRAY['Pomerode', 'Bcamboriu', 'Curitiba'];
+    schemas text[] = ARRAY['sc_pomerode', 'sc_bcamboriu', 'pr_curitiba', 'sc_brusquet', 'sc_criciumat'];
+    labels text[] = ARRAY['Pomerode', 'Bcamboriu', 'Curitiba', 'Brusquet', 'Criciumat'];
     s text;
     l text;
     t text;
 BEGIN
-    FOR i IN 1..3 LOOP
+    FOR i IN 1..5 LOOP
         s = schemas[i];
         l = labels[i];
         FOREACH t IN ARRAY ARRAY['agente', 'infracao', 'municipio', 'pessoa', 'veiculo', 'erro_consistencia', 'auto_infracao'] LOOP
