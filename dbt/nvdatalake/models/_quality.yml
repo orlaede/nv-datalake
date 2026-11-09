@@ -222,13 +222,6 @@ models:
         columns:
         - source_key
         - id
-  - unique_key:
-      arguments:
-        columns:
-        - source_key
-        - num_auto
-      config:
-        where: num_auto is not null
   columns:
   - name: id
     data_tests:

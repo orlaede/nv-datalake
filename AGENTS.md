@@ -67,8 +67,10 @@ nvtr (schemas regionais) --Kestra/ingest.py--> nvdatalake.bronze --dbt--> silver
 - **`sk_auto`:** sequência simples (`row_number`) em `dim_auto`, com business key
   `source_key` + `num_auto` (com `trim`; vazio vira nulo e fica fora). Linha `0` =
   auto desconhecido. `fac_auto_infracao` e `fac_ait_retorno` ligam-se por `sk_auto`;
-  a regra de unicidade `(source_key, num_auto)` é testada em `dim_auto` e
-  `fac_ait_retorno` (duplicado falha o `dbt build`). Retorno sem auto vai para `0`.
+  a unicidade `(source_key, num_auto)` é testada só em `dim_auto`. Em
+  `fac_ait_retorno` `num_auto` **repete** (um auto pode ser processado mais de uma
+  vez; ex.: até 5 retornos por auto); a chave do fato é `(source_key, id)`.
+  Retorno sem auto vai para `0`.
   Não use testes dbt `severity: warn`: o fluxo termina `WARNING` e a CLI trata como falha.
 - **Gold:** camada autocontida. Dimensões espelhadas (`*_gold`) e fatos estrela
   (`fac_auto_infracao`, `fac_auto_infracao_mensal`). Rótulos e CASEs de

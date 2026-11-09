@@ -97,7 +97,7 @@ def test_all_bronze_sources_types_and_staging(execution, databases, client):
     with source.connect() as src, destination.connect() as dst:
         for config in SOURCES:
             for table in LOADED_TABLES[config.key]:
-                expected = {"auto_infracao": 3}.get(table, {"nvtr_sc_pomerode": 2, "nvtr_pr_curitiba": 3}[config.key] if table == "ait_retorno" else 1)
+                expected = {"auto_infracao": 3}.get(table, {"nvtr_sc_pomerode": 2, "nvtr_pr_curitiba": 4}[config.key] if table == "ait_retorno" else 1)
                 assert report[f"{config.key}__{table}"] == expected
                 assert dst.execute(text(f"SELECT count(*) FROM bronze.{config.key}__{table}")).scalar() == expected
                 assert dst.execute(text(f"SELECT count(*) FROM bronze.stg_{table} WHERE source_key=:key"), {"key": config.key}).scalar() == expected
@@ -119,7 +119,7 @@ def test_optional_tables_missing_are_skipped_not_failed(execution, databases, cl
     assert sorted(skipped) == sorted(f"{key}__{table}" for key in absent for table in _VARIABLES["optional_tables"])
     with destination.connect() as dst:
         for table in _VARIABLES["optional_tables"]:
-            assert dst.execute(text(f"SELECT count(*) FROM bronze.stg_{table}")).scalar() == (5 if table == "ait_retorno" else 2)
+            assert dst.execute(text(f"SELECT count(*) FROM bronze.stg_{table}")).scalar() == (6 if table == "ait_retorno" else 2)
             for key in absent:
                 assert dst.execute(text("SELECT count(*) FROM information_schema.tables WHERE table_schema='bronze' AND table_name=:t"), {"t": f"{key}__{table}"}).scalar() == 0
 
@@ -137,12 +137,13 @@ def test_codigo_retorno_dimension_and_ait_retorno_fact(execution, databases):
             ("nvtr_pr_curitiba", 1, "Curitiba1", "Rejeitado", "Curitiba"),
             ("nvtr_pr_curitiba", 2, "Curitiba2", "Rejeitado", "Curitiba"),
             ("nvtr_pr_curitiba", 3, "ORFAO", "Não Informado", "Curitiba"),
+            ("nvtr_pr_curitiba", 4, "Curitiba1", "Rejeitado", "Curitiba"),
             ("nvtr_sc_pomerode", 1, "Pomerode1", "Aceito", "Pomerode"),
             ("nvtr_sc_pomerode", 2, "Pomerode2", "Não Informado", "Pomerode"),
         ]
         # sk_auto links both facts through dim_auto (business key source_key + trimmed num_auto).
         linked = conn.execute(text("SELECT r.source_key, r.id, a.id FROM silver.fac_ait_retorno r JOIN silver.fac_auto_infracao a USING (sk_auto) WHERE r.sk_auto > 0 ORDER BY r.source_key, r.id")).all()
-        assert linked == [("nvtr_pr_curitiba", 1, 1), ("nvtr_pr_curitiba", 2, 2), ("nvtr_sc_pomerode", 1, 1), ("nvtr_sc_pomerode", 2, 2)]
+        assert linked == [("nvtr_pr_curitiba", 1, 1), ("nvtr_pr_curitiba", 2, 2), ("nvtr_pr_curitiba", 4, 1), ("nvtr_sc_pomerode", 1, 1), ("nvtr_sc_pomerode", 2, 2)]
         assert conn.execute(text("SELECT source_key, id FROM silver.fac_ait_retorno WHERE sk_auto = 0")).all() == [("nvtr_pr_curitiba", 3)]
         assert conn.execute(text("SELECT count(*) FROM silver.fac_auto_infracao WHERE sk_auto = 0")).scalar() == 0
         for name in ["dim_codigo_retorno", "fac_ait_retorno"]:

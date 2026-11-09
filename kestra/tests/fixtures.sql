@@ -115,5 +115,6 @@ INSERT INTO sc_pomerode.ait_retorno VALUES (1, 'Pomerode1', 1), (2, 'Pomerode2',
 CREATE TABLE pr_curitiba.codigo_retorno (id bigint PRIMARY KEY, codigo_retorno bigint, descricao varchar(255), retorno_sucesso boolean);
 CREATE TABLE pr_curitiba.ait_retorno (id bigint PRIMARY KEY, num_auto varchar(255), codigo_retorno bigint REFERENCES pr_curitiba.codigo_retorno(id));
 INSERT INTO pr_curitiba.codigo_retorno VALUES (1, 200, 'Rejeitado', false);
+-- num_auto repeats ('Curitiba1' twice): an auto may be processed more than once.
 -- ' Curitiba2 ' only links to its auto if num_auto is trimmed; 'ORFAO' has no auto (sk_auto = 0).
-INSERT INTO pr_curitiba.ait_retorno VALUES (1, 'Curitiba1', 1), (2, ' Curitiba2 ', 1), (3, 'ORFAO', NULL);
+INSERT INTO pr_curitiba.ait_retorno VALUES (1, 'Curitiba1', 1), (2, ' Curitiba2 ', 1), (3, 'ORFAO', NULL), (4, 'Curitiba1', 1);
