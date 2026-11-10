@@ -129,7 +129,7 @@ administração está disponível pela API em `/api/admin/users`,
 
 | Permissão | Responsabilidade |
 | --- | --- |
-| `dashboard.read` | Visualizar indicadores |
+| `dashboard.read` | Visualizar indicadores e o dashboard Processamento |
 | `autos.read` | Consultar autos e agrupamentos |
 | `autos.export` | Exportar Excel e PDF |
 | `users.read` | Listar usuários |

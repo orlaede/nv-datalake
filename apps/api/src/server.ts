@@ -4,6 +4,7 @@ import { getAuthConfig } from "./auth/config"
 import { authenticateJwt, requirePermission } from "./auth/middleware"
 import { healthRouter } from "./routes/health"
 import { autosInfracaoRouter } from "./routes/autosInfracao"
+import { processamentoRouter } from "./routes/processamento"
 import { authRouter } from "./routes/auth"
 import { adminRouter } from "./routes/admin"
 
@@ -27,7 +28,11 @@ export function createApp(options: { disableAuth?: boolean } = {}) {
   if (!options.disableAuth) {
     app.use("/api/autos-infracao", authenticateJwt, requirePermission("autos.read"))
   }
+  if (!options.disableAuth) {
+    app.use("/api/processamento", authenticateJwt, requirePermission("dashboard.read"))
+  }
   app.use(autosInfracaoRouter)
+  app.use(processamentoRouter)
   app.use("/api", (_req, res) => {
     res.status(404).json({ error: "Rota não encontrada" })
   })
