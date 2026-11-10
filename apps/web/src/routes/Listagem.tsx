@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { DataTable, type AutoInfracaoRow } from "@/components/dashboard/DataTable"
-import { FiltersControls } from "@/components/dashboard/FiltersControls"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { useFilters, formatPeriodoLabel } from "@/lib/use-filters"
+import { PageHeader } from "@/components/dashboard/PageHeader"
+import { useFilters } from "@/lib/use-filters"
 import { usePagination } from "@/lib/use-pagination"
 import { apiGet } from "@/lib/api"
 
@@ -58,18 +57,7 @@ export function Listagem() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex flex-row flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="shrink-0 text-2xl font-bold">Listagem de Autos de Infração</h1>
-          {formatPeriodoLabel(filters) && (
-            <span className="text-sm text-muted-foreground">{formatPeriodoLabel(filters)}</span>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <FiltersControls />
-          <ThemeToggle />
-        </div>
-      </div>
+      <PageHeader title="Listagem de Autos de Infração" />
 
       <DataTable
         rows={rows}

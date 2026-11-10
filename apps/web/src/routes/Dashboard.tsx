@@ -3,11 +3,10 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { KpiCard } from "@/components/dashboard/KpiCard"
 import { ChartCard } from "@/components/dashboard/ChartCard"
 import { AutosPorMesCard } from "@/components/dashboard/AutosPorMesCard"
-import { FiltersControls } from "@/components/dashboard/FiltersControls"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { PageHeader } from "@/components/dashboard/PageHeader"
 import { Button } from "@/components/ui/button"
 import { LineChart, BarChartVertical } from "@/components/charts"
-import { useFilters, formatPeriodoLabel } from "@/lib/use-filters"
+import { useFilters } from "@/lib/use-filters"
 import { apiGet } from "@/lib/api"
 
 type StatsResponse = {
@@ -48,19 +47,10 @@ export function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex flex-row flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="shrink-0 text-2xl font-bold">Dashboard</h1>
-          {formatPeriodoLabel(filters) && (
-            <span className="text-sm text-muted-foreground">{formatPeriodoLabel(filters)}</span>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <FiltersControls />
-          <Button onClick={() => navigate(`/autos${location.search}`)}>Mostrar Dados</Button>
-          <ThemeToggle />
-        </div>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        actions={<Button onClick={() => navigate(`/autos${location.search}`)}>Mostrar Dados</Button>}
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard label="Total de Autos" value={String(data?.total ?? "—")} />

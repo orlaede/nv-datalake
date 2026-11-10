@@ -6,17 +6,21 @@ export function ChartCard({
   title,
   children,
   className,
+  titleClassName,
+  contentClassName,
 }: {
   title: string
   children: ReactNode
   className?: string
+  titleClassName?: string
+  contentClassName?: string
 }) {
   return (
     <Card className={cn("rounded-2xl shadow-sm", className)}>
       <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
+        <CardTitle className={cn("text-base", titleClassName)}>{title}</CardTitle>
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent className={contentClassName}>{children}</CardContent>
     </Card>
   )
 }

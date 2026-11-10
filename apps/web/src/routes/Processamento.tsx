@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
 import { KpiCard } from "@/components/dashboard/KpiCard"
 import { ChartCard } from "@/components/dashboard/ChartCard"
-import { FiltersControls } from "@/components/dashboard/FiltersControls"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { BarChartStacked, BarChartRetornos } from "@/components/charts"
-import { useFilters, formatPeriodoLabel } from "@/lib/use-filters"
+import { PageHeader } from "@/components/dashboard/PageHeader"
+import { FaixaTooltip, corPendentes } from "@/components/dashboard/FaixaTooltip"
+import { BarChartStacked, BarChartHorizontal } from "@/components/charts"
+import { useFilters } from "@/lib/use-filters"
 import { apiGet } from "@/lib/api"
 
 type StatsResponse = {
@@ -40,18 +40,7 @@ export function Processamento() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex flex-row flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="shrink-0 text-2xl font-bold">Processamento</h1>
-          {formatPeriodoLabel(filters) && (
-            <span className="text-sm text-muted-foreground">{formatPeriodoLabel(filters)}</span>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <FiltersControls />
-          <ThemeToggle />
-        </div>
-      </div>
+      <PageHeader title="Processamento" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <KpiCard label={`Dentro do prazo (≤ ${prazo} dias)`} value={String(data?.dentroPrazo ?? "—")} />
@@ -59,11 +48,29 @@ export function Processamento() {
       </div>
 
       <ChartCard title="Autos por Faixa de Dias">
-        <BarChartStacked data={faixas} />
+        <BarChartStacked
+          data={faixas}
+          xKey="rotulo"
+          series={[
+            { key: "processados", label: "Processados", color: "var(--chart-1)" },
+            { key: "pendentes", label: "Pendentes", color: "var(--warning)" },
+          ]}
+          totalKey="total"
+          topColor={(r) => corPendentes(Boolean(r.dentroPrazo))}
+          tooltip={<FaixaTooltip />}
+        />
       </ChartCard>
 
       <ChartCard title="Autos por Tipo de Retorno">
-        <BarChartRetornos data={retornosData?.retornos ?? []} />
+        <BarChartHorizontal
+          data={retornosData?.retornos ?? []}
+          xKey="tipo"
+          yKey="total"
+          config={{ total: { label: "Autos", color: "var(--chart-1)" } }}
+          yAxisWidth={160}
+          rowHeight={36}
+          showValues
+        />
       </ChartCard>
     </div>
   )
