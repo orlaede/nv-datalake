@@ -2,6 +2,10 @@
 
 Branch: `codex/integracao-kestra`, baseada em `main` (`51aa10e`).
 
+> Registro histórico de 2026-10-01. Os números abaixo (14 tabelas de origem, 24
+> modelos dbt, 76 testes) refletem aquela execução. Hoje o projeto tem 42 tabelas
+> de origem (7 em cada um dos 6 schemas), mais as opcionais, e 34 modelos dbt.
+
 ## Pipeline isolado
 
 Comando: `./scripts/test_kestra.sh`.

@@ -6,9 +6,7 @@ Orientações para agentes de código neste repositório. Para uso e execução,
 Para comandos de shell, siga também [RTK.md](RTK.md) (proxy CLI que reduz o
 consumo de tokens em operações de desenvolvimento).
 
-Be extremely concise. Sacrifice grammar for the sake of concision.
-
-When reporting  information to me, be extremely concise. Sacrifice grammar for the sake of concision.
+Seja extremamente conciso ao reportar informações. Sacrifique a gramática em favor da concisão.
 
 ## Visão geral
 
@@ -83,7 +81,7 @@ nvtr (schemas regionais) --Kestra/ingest.py--> nvdatalake.bronze --dbt--> silver
   (só `'*'`), `data_inicial_autos`, `tipo_envio_processamento`,
   `receptor_processamento`, `num_dias_retencao_processamento`. O dbt pivota em
   `dim_parametro_origem` (1 linha por origem; sem valor = nulo). Aplique a 003
-  **antes** do fluxo; sem ela a ingestão falha. Compare `num_dias` dos fatos com
+  **antes** do fluxo; sem ela a ingestão (e o dbt, em `dim_parametro_origem`) falha. Compare `num_dias` dos fatos com
   `num_dias_retencao_processamento`.
 - **Data inicial dos autos:** a ingestão só lê `auto_infracao` com
   `data_hora >= data inicial` e `ait_retorno` cujo auto (`num_auto` com `trim`)
@@ -93,7 +91,7 @@ nvtr (schemas regionais) --Kestra/ingest.py--> nvdatalake.bronze --dbt--> silver
   tabela ou sem data, a ingestão falha (nunca carrega tudo). Full-replace:
   mudar a data exige reexecutar o fluxo.
 - **Gold:** camada autocontida. Dimensões espelhadas (`*_gold`) e fatos estrela
-  (`fac_auto_infracao`, `fac_auto_infracao_mensal`). Rótulos e CASEs de
+  (`fac_auto_infracao`, `fac_ait_retorno`, `fac_auto_infracao_mensal`). Rótulos e CASEs de
   apresentação ficam na API, não no dbt.
 - **`generate_schema_name` customizado:** o schema do `custom_schema_name` é usado
   literalmente (`bronze`, `silver`, `gold`), sem prefixo do target.

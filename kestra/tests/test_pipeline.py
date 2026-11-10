@@ -208,7 +208,7 @@ def test_data_inicial_filters_autos_and_their_returns(execution, databases):
     _, destination = databases
     with destination.connect() as conn:
         old = dict(conn.execute(text("SELECT source_key, count(*) FROM bronze.stg_auto_infracao WHERE data_hora < '2026-01-01' GROUP BY 1")).all())
-        assert old == {"nvtr_sc_brusquet": 1}  # only the origin whose config.parametro_origem moves the start date back
+        assert old == {"nvtr_sc_brusquet": 1}  # only the origin whose config.parametro moves the start date back
         assert conn.execute(text("SELECT num_auto FROM bronze.stg_ait_retorno WHERE num_auto IN ('ORFAO', 'Curitiba4')")).all() == []
         assert conn.execute(text("SELECT data_inicial_autos FROM silver.dim_parametro_origem WHERE source_key='nvtr_sc_brusquet'")).scalar().isoformat() == "2025-12-01"
 
