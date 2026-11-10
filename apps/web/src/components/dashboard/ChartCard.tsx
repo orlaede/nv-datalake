@@ -8,19 +8,27 @@ export function ChartCard({
   className,
   titleClassName,
   contentClassName,
+  dataTable,
 }: {
   title: string
   children: ReactNode
   className?: string
   titleClassName?: string
   contentClassName?: string
+  /** Alternativa em tabela para leitores de tela (ver ChartDataTable). */
+  dataTable?: ReactNode
 }) {
   return (
     <Card className={cn("rounded-2xl shadow-sm", className)}>
       <CardHeader>
-        <CardTitle className={cn("text-base", titleClassName)}>{title}</CardTitle>
+        <CardTitle role="heading" aria-level={2} className={cn("text-base", titleClassName)}>{title}</CardTitle>
       </CardHeader>
-      <CardContent className={contentClassName}>{children}</CardContent>
+      <CardContent className={contentClassName}>
+        <div role="group" aria-label={title} className="contents">
+          {children}
+          {dataTable}
+        </div>
+      </CardContent>
     </Card>
   )
 }

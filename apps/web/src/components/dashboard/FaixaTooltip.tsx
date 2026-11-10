@@ -40,10 +40,35 @@ export function FaixaTooltip({ active, payload }: { active?: boolean; payload?: 
       </div>
       <div className="mt-2 border-t pt-2 text-muted-foreground">
         {pct}% processado ·{" "}
-        <span className={d.dentroPrazo ? "text-success" : "text-destructive"}>
+        <span className={d.dentroPrazo ? "text-success-text" : "text-destructive"}>
           {d.dentroPrazo ? "dentro do prazo" : "fora do prazo"}
         </span>
       </div>
     </div>
+  )
+}
+
+// Legenda do gráfico de faixas: além da cor, "fora do prazo" é hachurado.
+export function FaixaLegend() {
+  const itens = [
+    { label: "Processados", style: { backgroundColor: "var(--chart-1)" } },
+    { label: "Pendentes dentro do prazo", style: { backgroundColor: "var(--success)" } },
+    {
+      label: "Pendentes fora do prazo",
+      style: {
+        backgroundImage:
+          "repeating-linear-gradient(45deg, var(--destructive) 0 3px, var(--card) 3px 5px)",
+      },
+    },
+  ]
+  return (
+    <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      {itens.map((i) => (
+        <li key={i.label} className="flex items-center gap-2">
+          <span aria-hidden="true" className="size-3 rounded-[3px] border border-border" style={i.style} />
+          {i.label}
+        </li>
+      ))}
+    </ul>
   )
 }

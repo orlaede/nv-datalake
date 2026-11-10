@@ -18,11 +18,11 @@ export function KpiCard({
   return (
     <Card className="rounded-2xl shadow-sm">
       <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
-        {icon}
-        <CardTitle className="text-sm text-muted-foreground">{label}</CardTitle>
+        {icon && <span aria-hidden="true" className="text-primary">{icon}</span>}
+        <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-3xl font-bold tabular-nums">{value}</div>
         {trend && (
           <Badge variant={trendPositive ? "success" : "destructive"} className="mt-1">
             {trend}

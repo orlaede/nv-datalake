@@ -51,7 +51,7 @@ describe("Dashboard", () => {
 
     await waitFor(() => expect(screen.getByText("363")).toBeInTheDocument())
     expect(screen.getByText("4")).toBeInTheDocument()
-    expect(screen.getByText("6", { selector: "div.text-2xl" })).toBeInTheDocument()
+    expect(screen.getByText("6", { selector: "div.text-3xl" })).toBeInTheDocument()
     expect(screen.getByText("Total de Autos")).toBeInTheDocument()
     expect(screen.getByText("Número de Agentes")).toBeInTheDocument()
     expect(screen.getByText("Número de Equipamentos")).toBeInTheDocument()

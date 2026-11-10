@@ -28,6 +28,7 @@
     --color-destructive: var(--destructive);
     --color-warning: var(--warning);
     --color-success: var(--success);
+    --color-success-text: var(--success-text);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
@@ -58,20 +59,21 @@
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.600 0.061 225.773); /* #57889c */
+    --primary: oklch(0.560 0.061 225.773); /* #57889c escurecido p/ contraste 4,5:1 com branco */
     --primary-foreground: oklch(1 0 0);
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.205 0 0);
     --muted: #e8eef0;
-    --muted-foreground: #64748b;
+    --muted-foreground: #5b6b80; /* >= 4,5:1 sobre --background */
     --accent: #e6eef1;
     --accent-foreground: oklch(0.205 0 0);
     --destructive: oklch(0.577 0.215 27.325); /* #dc2626 */
     --success: #16a34a;
+    --success-text: #15803d; /* texto: >= 4,5:1 sobre card */
     --warning: #d97706;
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    --ring: oklch(0.550 0.080 225); /* >= 3:1 (WCAG 1.4.11) */
     --chart-1: oklch(0.600 0.061 225.773); /* primary #57889c */
     --chart-2: oklch(0.590 0.066 55.388); /* complementary #9c7357 */
     --chart-3: oklch(0.468 0.067 271.853); /* analogous escura #4d5880 */
@@ -80,7 +82,7 @@
     --radius: 0.625rem;
     --sidebar: #f1f4f5;
     --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: #57889c;
+    --sidebar-primary: oklch(0.560 0.061 225.773);
     --sidebar-primary-foreground: oklch(1 0 0);
     --sidebar-accent: #e6eef1;
     --sidebar-accent-foreground: oklch(0.205 0 0);
@@ -105,10 +107,11 @@
     --accent-foreground: oklch(0.985 0 0);
     --destructive: oklch(0.680 0.215 27.325); /* #dc2626 lightened */
     --success: #22c55e;
+    --success-text: #4ade80;
     --warning: #f59e0b;
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --ring: oklch(0.720 0.080 225);
     --chart-1: oklch(0.700 0.061 225.773);
     --chart-2: oklch(0.690 0.066 55.388);
     --chart-3: oklch(0.568 0.067 271.853);
@@ -126,7 +129,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
     }
   body {
     @apply bg-background text-foreground;
@@ -134,4 +137,12 @@
   html {
     @apply font-sans;
     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
