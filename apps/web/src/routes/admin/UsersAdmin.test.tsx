@@ -62,7 +62,8 @@ describe("UsersAdmin", () => {
     expect(await screen.findByText("Usuário Teste")).toBeInTheDocument()
 
     vi.mocked(apiRequest).mockResolvedValueOnce({ user: listedUser })
-    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Novo Usuário" } })
+    fireEvent.click(screen.getByRole("button", { name: "Novo usuário" }))
+    fireEvent.change(await screen.findByLabelText("Nome"), { target: { value: "Novo Usuário" } })
     fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "novo@example.com" } })
     fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "senha-segura-123" } })
     fireEvent.change(screen.getByLabelText("Roles"), { target: { value: "consulta, operador" } })

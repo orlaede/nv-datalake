@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { FormDialog } from "@/components/dashboard/FormDialog"
 import { PermissionGate, useAuth } from "@/lib/auth"
 import { apiRequest, type AuthUser } from "@/lib/api"
 
@@ -23,6 +24,7 @@ export function UsersAdmin() {
   const [page, setPage] = useState(1)
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
   const usersQuery = useQuery({
@@ -43,8 +45,7 @@ export function UsersAdmin() {
       })
     },
     onSuccess: () => {
-      setForm(emptyForm)
-      setEditingId(null)
+      closeDialog()
       void queryClient.invalidateQueries({ queryKey: ["admin-users"] })
     },
   })
@@ -71,39 +72,57 @@ export function UsersAdmin() {
     setAppliedSearch(search)
   }
 
-  function submitForm(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  function submitForm() {
     setNotice(null)
     saveMutation.mutate()
+  }
+
+  function closeDialog() {
+    setDialogOpen(false)
+    setEditingId(null)
+    setForm(emptyForm)
+    saveMutation.reset()
+  }
+
+  function newUser() {
+    setEditingId(null)
+    setForm(emptyForm)
+    setDialogOpen(true)
   }
 
   function editUser(user: AdminUser) {
     setEditingId(user.id)
     setForm({ name: user.name, email: user.email, password: "", roles: user.roles.join(", ") })
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    setDialogOpen(true)
   }
 
   return (
     <PermissionGate permission="users.read" fallback={<p className="p-6 text-sm text-muted-foreground">Você não tem permissão para visualizar usuários.</p>}>
       <div className="flex flex-col gap-6 p-6">
-        <header>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Administração</p>
-          <h1 className="text-2xl font-bold">Usuários</h1>
-          <p className="text-sm text-muted-foreground">Gerencie acesso, roles e sessões da plataforma.</p>
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Administração</p>
+            <h1 className="text-2xl font-bold">Usuários</h1>
+            <p className="text-sm text-muted-foreground">Gerencie acesso, roles e sessões da plataforma.</p>
+          </div>
+          {hasPermission("users.manage") && <Button type="button" onClick={newUser}>Novo usuário</Button>}
         </header>
 
         {hasPermission("users.manage") && (
-          <form className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-5" onSubmit={submitForm}>
+          <FormDialog
+            open={dialogOpen}
+            onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
+            title={editingId ? "Editar usuário" : "Novo usuário"}
+            submitLabel={editingId ? "Salvar alterações" : "Criar usuário"}
+            pending={saveMutation.isPending}
+            error={saveMutation.error?.message}
+            onSubmit={submitForm}
+          >
             <label className="space-y-1 text-sm font-medium" htmlFor="user-name">Nome<Input id="user-name" aria-label="Nome" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
             <label className="space-y-1 text-sm font-medium" htmlFor="user-email">E-mail<Input id="user-email" aria-label="E-mail" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /></label>
             <label className="space-y-1 text-sm font-medium" htmlFor="user-password">Senha<Input id="user-password" aria-label="Senha" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required={!editingId} placeholder={editingId ? "Deixe vazio para manter" : undefined} /></label>
             <label className="space-y-1 text-sm font-medium" htmlFor="user-roles">Roles<Input id="user-roles" aria-label="Roles" value={form.roles} onChange={(event) => setForm({ ...form, roles: event.target.value })} /></label>
-            <div className="flex items-end gap-2">
-              <Button type="submit" disabled={saveMutation.isPending}>{editingId ? "Salvar alterações" : "Criar usuário"}</Button>
-              {editingId && <Button type="button" variant="outline" onClick={() => { setEditingId(null); setForm(emptyForm) }}>Cancelar</Button>}
-            </div>
-            {saveMutation.error && <p role="alert" className="text-sm text-destructive sm:col-span-2 lg:col-span-5">{saveMutation.error.message}</p>}
-          </form>
+          </FormDialog>
         )}
 
         <form aria-label="Busca de usuários" className="flex gap-2" onSubmit={submitSearch}>

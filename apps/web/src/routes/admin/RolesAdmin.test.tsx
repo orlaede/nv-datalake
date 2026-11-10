@@ -35,7 +35,8 @@ describe("RolesAdmin", () => {
     )
 
     expect(await screen.findByText("Nenhuma role encontrada.")).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText("Chave"), { target: { value: "auditor" } })
+    fireEvent.click(screen.getByRole("button", { name: "Nova role" }))
+    fireEvent.change(await screen.findByLabelText("Chave"), { target: { value: "auditor" } })
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Auditor" } })
     fireEvent.click(screen.getByLabelText("Consultar autos"))
     fireEvent.click(screen.getByRole("button", { name: "Criar role" }))
