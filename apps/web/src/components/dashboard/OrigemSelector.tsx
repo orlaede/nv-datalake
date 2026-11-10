@@ -33,12 +33,12 @@ export function OrigemSelector() {
         setFilter("origem", !value || value === ALL_ORIGENS_VALUE ? "" : value)
       }
     >
-      <SelectTrigger className="bg-card shadow-sm" aria-label="Origem dos dados">
+      <SelectTrigger className="min-w-48 bg-card shadow-sm" aria-label="Origem dos dados">
         <SelectValue placeholder="Origem">
           {(value: string) => labelByValue[value] ?? "Todas as origens"}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent align="start" alignItemWithTrigger={false}>
         <SelectItem value={ALL_ORIGENS_VALUE}>Todas as origens</SelectItem>
         {origens.map((origem) => (
           <SelectItem key={origem} value={origem}>
