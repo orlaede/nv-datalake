@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom"
 import { Hourglass, LayoutDashboard, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, ShieldCheck, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { useAuth } from "@/lib/auth"
+import { useAuth } from "@/lib/auth-context"
 
 const primaryNavItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.read" },

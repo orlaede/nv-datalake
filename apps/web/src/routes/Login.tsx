@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useAuth } from "@/lib/auth"
+import { useAuth } from "@/lib/auth-context"
 
 export function Login() {
   const { login } = useAuth()

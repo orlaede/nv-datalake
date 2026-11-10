@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react"
+import { useId, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { X } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { apiGet } from "@/lib/api"
+import { cn } from "@/lib/utils"
 import { FILTER_KEYS, useFilters, type FilterKey } from "@/lib/use-filters"
 
 const COMPETENCIA_OPTIONS = [
@@ -39,12 +40,16 @@ type SuggestionsResponse = {
   suggestions: string[]
 }
 
-function AutocompleteFilter({
+export function AutocompleteFilter({
   filterKey,
   placeholder,
+  ariaLabel,
+  className,
 }: {
   filterKey: AutocompleteFilterKey
   placeholder: string
+  ariaLabel?: string
+  className?: string
 }) {
   const listId = useId()
   const inputId = useId()
@@ -64,9 +69,11 @@ function AutocompleteFilter({
   })
   const suggestions = data?.suggestions ?? []
 
-  useEffect(() => {
+  const [prevSelected, setPrevSelected] = useState(selectedValue)
+  if (prevSelected !== selectedValue) {
+    setPrevSelected(selectedValue)
     setInputValue(selectedValue)
-  }, [selectedValue])
+  }
 
   function selectSuggestion(suggestion: string) {
     setInputValue(suggestion)
@@ -83,6 +90,7 @@ function AutocompleteFilter({
         aria-controls={listId}
         aria-expanded={open && suggestions.length > 0}
         placeholder={placeholder}
+        aria-label={ariaLabel}
         value={inputValue}
         onChange={(e) => {
           const nextValue = e.target.value
@@ -99,7 +107,7 @@ function AutocompleteFilter({
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => window.setTimeout(() => setOpen(false), 100)}
-        className="pr-7"
+        className={cn("pr-7", className)}
       />
       {inputValue ? (
         <button
@@ -179,14 +187,18 @@ function CustomDateRangeFilter() {
   )
 }
 
-function SelectFilter({
+export function SelectFilter({
   filterKey,
   placeholder,
   options,
+  ariaLabel,
+  className,
 }: {
   filterKey: FilterKey
   placeholder: string
   options: { value: string; label: string }[]
+  ariaLabel?: string
+  className?: string
 }) {
   const { filters, setFilter } = useFilters()
   const labelByValue: Record<string, string> = { [ALL_OPTION_VALUE]: "Todos" }
@@ -197,7 +209,7 @@ function SelectFilter({
       value={filters[filterKey] ?? ALL_OPTION_VALUE}
       onValueChange={(value) => setFilter(filterKey, !value || value === ALL_OPTION_VALUE ? "" : value)}
     >
-      <SelectTrigger className="w-full">
+      <SelectTrigger className={cn("w-full", className)} aria-label={ariaLabel}>
         <SelectValue placeholder={placeholder}>
           {(value: string) => labelByValue[value] ?? placeholder}
         </SelectValue>

@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useState } from "react"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
-import { AuthProvider, PermissionGate, ProtectedRoute, useAuth, type AuthSession } from "./auth"
+import { useAuth } from "./auth-context"
+import { AuthProvider, PermissionGate, ProtectedRoute, type AuthSession } from "./auth"
 import { apiGet } from "./api"
 
 const user = {

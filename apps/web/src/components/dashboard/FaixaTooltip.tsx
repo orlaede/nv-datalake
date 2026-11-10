@@ -1,13 +1,11 @@
+import { corPendentes } from "./faixa-cores"
+
 export type FaixaBar = {
   rotulo: string
   total: number
   processados: number
   pendentes: number
   dentroPrazo: boolean
-}
-
-export function corPendentes(dentroPrazo: boolean) {
-  return dentroPrazo ? "var(--success)" : "var(--destructive)"
 }
 
 // Balão do gráfico de faixas de dias do Processamento.

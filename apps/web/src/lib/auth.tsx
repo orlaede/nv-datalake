@@ -1,19 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import { Navigate, Outlet, useLocation } from "react-router-dom"
-import { API_URL, refreshAuthSession, setAuthSession, type AuthSession, type AuthUser } from "./api"
+import { API_URL, refreshAuthSession, setAuthSession, type AuthSession } from "./api"
+
+import { AuthContext, useAuth, type AuthContextValue } from "./auth-context"
 
 export type { AuthSession, AuthUser } from "./api"
-
-type AuthContextValue = {
-  user: AuthUser | null
-  accessToken: string | null
-  isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
-  logout: () => Promise<void>
-  hasPermission: (permission: string) => boolean
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children, initialSession }: { children: ReactNode; initialSession?: AuthSession | null }) {
   const [session, setSession] = useState<AuthSession | null>(initialSession ?? null)
@@ -22,8 +13,6 @@ export function AuthProvider({ children, initialSession }: { children: ReactNode
   useEffect(() => {
     if (initialSession !== undefined) {
       setAuthSession(initialSession)
-      setSession(initialSession)
-      setIsLoading(false)
       return
     }
 
@@ -76,12 +65,6 @@ export function AuthProvider({ children, initialSession }: { children: ReactNode
   }), [isLoading, login, logout, session])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext)
-  if (!context) throw new Error("useAuth deve ser usado dentro de AuthProvider")
-  return context
 }
 
 export function ProtectedRoute() {

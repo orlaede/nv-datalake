@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { FormDialog } from "@/components/dashboard/FormDialog"
-import { PermissionGate, useAuth } from "@/lib/auth"
+import { PermissionGate } from "@/lib/auth"
+import { useAuth } from "@/lib/auth-context"
 import { apiRequest, type AuthUser } from "@/lib/api"
 
 type AdminUser = AuthUser & {

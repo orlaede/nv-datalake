@@ -1,13 +1,5 @@
-import { createContext, useContext, useEffect, useState } from "react"
-
-type Theme = "light" | "dark"
-
-type ThemeContextValue = {
-  theme: Theme
-  setTheme: (theme: Theme) => void
-}
-
-const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
+import { useEffect, useState } from "react"
+import { ThemeContext, type Theme } from "./theme-context"
 
 const STORAGE_KEY = "theme"
 
@@ -37,10 +29,4 @@ export function ThemeProvider({
       {children}
     </ThemeContext.Provider>
   )
-}
-
-export function useTheme() {
-  const ctx = useContext(ThemeContext)
-  if (!ctx) throw new Error("useTheme must be used within ThemeProvider")
-  return ctx
 }
