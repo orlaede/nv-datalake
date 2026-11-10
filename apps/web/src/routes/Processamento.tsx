@@ -58,11 +58,11 @@ export function Processamento() {
         <KpiCard label={`Fora do prazo (> ${prazo} dias)`} value={String(data?.foraPrazo ?? "—")} />
       </div>
 
-      <ChartCard title="Autos por faixa de dias">
+      <ChartCard title="Autos por Faixa de Dias">
         <BarChartStacked data={faixas} />
       </ChartCard>
 
-      <ChartCard title="Autos por tipo de retorno">
+      <ChartCard title="Autos por Tipo de Retorno">
         <BarChartRetornos data={retornosData?.retornos ?? []} />
       </ChartCard>
     </div>

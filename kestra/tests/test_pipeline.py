@@ -155,7 +155,7 @@ def test_codigo_retorno_dimension_and_ait_retorno_fact(execution, databases):
             ("nvtr_pr_curitiba", 2, "Curitiba2", "Rejeitado", "Curitiba"),
             ("nvtr_pr_curitiba", 4, "Curitiba1", "Rejeitado", "Curitiba"),
             ("nvtr_sc_pomerode", 1, "Pomerode1", "Aceito", "Pomerode"),
-            ("nvtr_sc_pomerode", 2, "Pomerode2", "Não Informado", "Pomerode"),
+            ("nvtr_sc_pomerode", 2, "Pomerode2", "Sem Retorno", "Pomerode"),
         ]
         # sk_auto links both facts through dim_auto (business key source_key + trimmed num_auto).
         linked = conn.execute(text("SELECT r.source_key, r.id, a.id FROM silver.fac_ait_retorno r JOIN silver.fac_auto_infracao a USING (sk_auto) WHERE r.sk_auto > 0 ORDER BY r.source_key, r.id")).all()

@@ -24,5 +24,5 @@ select
     null as source_key,
     0 as id,
     null as codigo_retorno,
-    'Não Informado' as descricao,
+    'Sem Retorno' as descricao,
     null as retorno_sucesso
