@@ -203,6 +203,8 @@ function extractFilters(query: Record<string, unknown>): AutoInfracaoFilters {
     competencia: typeof query.competencia === "string" ? query.competencia : undefined,
     motivo_cancelamento: typeof query.motivo_cancelamento === "string" ? query.motivo_cancelamento : undefined,
     origem: typeof query.origem === "string" ? query.origem : undefined,
+    numero_auto: typeof query.numero_auto === "string" ? query.numero_auto : undefined,
+    status: typeof query.status === "string" ? query.status : undefined,
   }
 }
 

@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { render, screen, fireEvent, within } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ReactElement } from "react"
+import { MemoryRouter } from "react-router-dom"
 import { DataTable } from "./DataTable"
 
 const baseRow = {
@@ -22,7 +23,7 @@ const baseRow = {
 function renderTable(element: ReactElement) {
   return render(
     <QueryClientProvider client={new QueryClient()}>
-      {element}
+      <MemoryRouter>{element}</MemoryRouter>
     </QueryClientProvider>
   )
 }
@@ -91,5 +92,64 @@ describe("DataTable", () => {
     )
     fireEvent.click(screen.getByRole("button", { name: "Próxima página" }))
     expect(onPageChange).toHaveBeenCalledWith(2)
+  })
+
+  describe("grid controls", () => {
+    afterEach(() => {
+      try {
+        window.localStorage.clear()
+      } catch {
+        // ignore
+      }
+    })
+
+    function table() {
+      return renderTable(
+        <DataTable
+          rows={[baseRow]}
+          page={1}
+          pageSize={25}
+          total={1}
+          onPageChange={vi.fn()}
+          onPageSizeChange={vi.fn()}
+          filters={{}}
+        />
+      )
+    }
+
+    it("hides a column via the Colunas sheet", () => {
+      table()
+      expect(screen.getByRole("columnheader", { name: "Equipamento" })).toBeInTheDocument()
+      fireEvent.click(screen.getByRole("button", { name: "Colunas" }))
+      fireEvent.click(screen.getByRole("checkbox", { name: "Equipamento" }))
+      expect(screen.queryByRole("columnheader", { name: "Equipamento" })).not.toBeInTheDocument()
+      expect(screen.queryByText("Radar 01")).not.toBeInTheDocument()
+    })
+
+    it("keeps at least one column visible", () => {
+      table()
+      fireEvent.click(screen.getByRole("button", { name: "Colunas" }))
+      const boxes = screen.getAllByRole("checkbox")
+      for (const box of boxes) fireEvent.click(box)
+      expect(screen.getAllByRole("columnheader", { hidden: true })).toHaveLength(1)
+    })
+
+    it("lists only the six grouping options", () => {
+      table()
+      fireEvent.click(screen.getByRole("button", { name: "Agrupar" }))
+      const dialog = screen.getByRole("dialog")
+      const labels = within(dialog)
+        .getAllByRole("checkbox")
+        .map((c) => c.getAttribute("id"))
+        .map((id) => dialog.querySelector(`label[for="${id}"]`)?.textContent)
+      expect(labels).toEqual(["Ano", "Mês", "Dia", "Hora", "Dia da Semana", "Agente"])
+      fireEvent.click(screen.getByRole("checkbox", { name: "Ano" }))
+      expect(screen.getByRole("button", { name: /Agrupar \(1\)/, hidden: true })).toBeInTheDocument()
+    })
+
+    it("has no grid-level filter button (filters live in the page header)", () => {
+      table()
+      expect(screen.queryByRole("button", { name: "Filtros" })).not.toBeInTheDocument()
+    })
   })
 })

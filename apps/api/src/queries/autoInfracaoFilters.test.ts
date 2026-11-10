@@ -10,6 +10,7 @@ import {
   MOTIVO_CANCELAMENTO_EXPR,
   ORIGEM_EXPR,
   PERIODO_EXPR,
+  STATUS_EXPR,
   TIPO_EXPR,
 } from "./goldStarExpressions"
 
@@ -75,6 +76,18 @@ describe("buildAutoInfracaoWhere", () => {
     const { clause, params } = buildAutoInfracaoWhere({ origem: "Quixadá" })
     expect(clause).toBe(`WHERE ${ORIGEM_EXPR} = $1`)
     expect(params).toEqual(["Quixadá"])
+  })
+
+  it("builds an ILIKE clause with wildcards for numero_auto", () => {
+    const { clause, params } = buildAutoInfracaoWhere({ numero_auto: "456" })
+    expect(clause).toBe("WHERE ai.num_auto::text ILIKE $1")
+    expect(params).toEqual(["%456%"])
+  })
+
+  it("builds an equality clause for status", () => {
+    const { clause, params } = buildAutoInfracaoWhere({ status: "Cancelado" })
+    expect(clause).toBe(`WHERE ${STATUS_EXPR} = $1`)
+    expect(params).toEqual(["Cancelado"])
   })
 
   it("ignores unknown/empty filter values", () => {

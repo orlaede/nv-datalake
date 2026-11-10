@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react"
+import { useState, type ReactNode } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { ChevronDown, ChevronRight } from "lucide-react"
+import { ChevronDown, ChevronRight, Columns3, Layers } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -12,6 +11,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { CheckListSheet } from "@/components/dashboard/CheckListSheet"
 import { Pagination } from "@/components/dashboard/Pagination"
 import { exportAutosInfracao, exportAutosInfracaoPdf } from "@/lib/export"
 import { fetchAutoInfracaoGroupRows, fetchAutoInfracaoGroups, type GroupNode, type GroupPathSegment } from "@/lib/groups"
@@ -43,160 +43,103 @@ function formatDataHora(value: string): string {
   return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-const columns: ColumnDef<AutoInfracaoRow>[] = [
-  { accessorKey: "numeroAuto", header: "Número do Auto" },
+type ColumnDefinition = {
+  id: string
+  apiField: string
+  label: string
+  render: (row: AutoInfracaoRow) => ReactNode
+}
+
+const COLUMN_DEFS: ColumnDefinition[] = [
+  { id: "numeroAuto", apiField: "numero_auto", label: "Número do Auto", render: (r) => r.numeroAuto },
+  { id: "dataHora", apiField: "data_hora", label: "Data/Hora", render: (r) => formatDataHora(r.dataHora) },
+  { id: "agente", apiField: "agente", label: "Agente", render: (r) => r.agente },
+  { id: "codigo", apiField: "codigo", label: "Código da Infração", render: (r) => formatCodigo(r.codigo) },
+  { id: "local", apiField: "local", label: "Local", render: (r) => r.local },
+  { id: "tipo", apiField: "tipo", label: "Tipo", render: (r) => r.tipo },
+  { id: "equipamento", apiField: "equipamento", label: "Equipamento", render: (r) => r.equipamento },
+  { id: "periodo", apiField: "periodo", label: "Turno", render: (r) => r.periodo },
+  { id: "competencia", apiField: "competencia", label: "Competência", render: (r) => r.competencia },
   {
-    accessorKey: "dataHora",
-    header: "Data/Hora",
-    cell: (ctx) => formatDataHora(ctx.getValue<string>()),
+    id: "motivoCancelamento",
+    apiField: "motivo_cancelamento",
+    label: "Motivo Cancelamento",
+   
+    render: (r) => r.motivoCancelamento ?? "—",
   },
-  { accessorKey: "agente", header: "Agente" },
   {
-    accessorKey: "codigo",
-    header: "Código da Infração",
-    cell: (ctx) => formatCodigo(ctx.getValue<string>()),
-  },
-  { accessorKey: "local", header: "Local" },
-  { accessorKey: "tipo", header: "Tipo" },
-  { accessorKey: "equipamento", header: "Equipamento" },
-  { accessorKey: "periodo", header: "Turno" },
-  { accessorKey: "competencia", header: "Competência" },
-  {
-    accessorKey: "motivoCancelamento",
-    header: "Motivo Cancelamento",
-    cell: (ctx) => ctx.getValue<string | null>() ?? "—",
-  },
-  {
-    accessorKey: "status",
-    header: "Status do Auto",
-    cell: (ctx) => {
-      const status = ctx.getValue<string>()
-      return (
-        <Badge variant={status === "Válido" ? "success" : "destructive"}>
-          {status}
-        </Badge>
-      )
-    },
+    id: "status",
+    apiField: "status",
+    label: "Status do Auto",
+   
+    render: (r) => <Badge variant={r.status === "Válido" ? "success" : "destructive"}>{r.status}</Badge>,
   },
 ]
 
-const DATE_GROUP_OPTIONS = [
+const GROUP_OPTIONS = [
   { id: "ano", label: "Ano", apiField: "ano" },
   { id: "mes", label: "Mês", apiField: "mes" },
   { id: "dia", label: "Dia", apiField: "dia" },
   { id: "hora", label: "Hora", apiField: "hora" },
-  { id: "semanaAno", label: "Semana do Ano", apiField: "semana_ano" },
   { id: "diaSemana", label: "Dia da Semana", apiField: "dia_semana" },
-] as const
+  { id: "agente", label: "Agente", apiField: "agente" },
+]
 
-const API_FIELD_BY_ACCESSOR: Record<string, string> = {
-  numeroAuto: "numero_auto",
-  dataHora: "data_hora",
-  agente: "agente",
-  codigo: "codigo",
-  local: "local",
-  tipo: "tipo",
-  equipamento: "equipamento",
-  periodo: "periodo",
-  competencia: "competencia",
-  motivoCancelamento: "motivo_cancelamento",
-  status: "status",
-  ...Object.fromEntries(DATE_GROUP_OPTIONS.map((o) => [o.id, o.apiField])),
+const API_FIELD_BY_GROUP = Object.fromEntries(GROUP_OPTIONS.map((o) => [o.id, o.apiField]))
+const GROUP_LABEL_BY_ID = Object.fromEntries(GROUP_OPTIONS.map((o) => [o.id, o.label]))
+
+const COLUMNS_STORAGE_KEY = "listagem.colunas"
+const ALL_COLUMN_IDS = COLUMN_DEFS.map((c) => c.id)
+
+function loadVisibleColumns(): string[] {
+  try {
+    const raw = window.localStorage.getItem(COLUMNS_STORAGE_KEY)
+    if (!raw) return ALL_COLUMN_IDS
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return ALL_COLUMN_IDS
+    const valid = ALL_COLUMN_IDS.filter((id) => parsed.includes(id))
+    return valid.length > 0 ? valid : ALL_COLUMN_IDS
+  } catch {
+    return ALL_COLUMN_IDS
+  }
 }
 
-const GROUP_LABEL_BY_ACCESSOR: Record<string, string> = {
-  ...Object.fromEntries(
-    columns.map((c) => [(c as { accessorKey: string }).accessorKey, c.header as string])
-  ),
-  ...Object.fromEntries(DATE_GROUP_OPTIONS.map((o) => [o.id, o.label])),
+function saveVisibleColumns(ids: string[]) {
+  try {
+    window.localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(ids))
+  } catch {
+    // storage indisponível: mantém só em memória
+  }
 }
 
-function AutoInfracaoRowCells({ row }: { row: AutoInfracaoRow }) {
+function AutoInfracaoRowCells({ row, columns }: { row: AutoInfracaoRow; columns: ColumnDefinition[] }) {
   return (
     <>
-      <TableCell>{row.numeroAuto}</TableCell>
-      <TableCell>{formatDataHora(row.dataHora)}</TableCell>
-      <TableCell>{row.agente}</TableCell>
-      <TableCell>{formatCodigo(row.codigo)}</TableCell>
-      <TableCell>{row.local}</TableCell>
-      <TableCell>{row.tipo}</TableCell>
-      <TableCell>{row.equipamento}</TableCell>
-      <TableCell>{row.periodo}</TableCell>
-      <TableCell>{row.competencia}</TableCell>
-      <TableCell>{row.motivoCancelamento ?? "—"}</TableCell>
-      <TableCell>
-        <Badge variant={row.status === "Válido" ? "success" : "destructive"}>{row.status}</Badge>
-      </TableCell>
+      {columns.map((column) => (
+        <TableCell key={column.id}>{column.render(row)}</TableCell>
+      ))}
     </>
   )
 }
 
-function GroupBySelector({
-  grouping,
-  onGroupingChange,
-}: {
-  grouping: string[]
-  onGroupingChange: (grouping: string[]) => void
-}) {
-  function toggleColumn(id: string) {
-    if (grouping.includes(id)) {
-      onGroupingChange(grouping.filter((g) => g !== id))
-    } else {
-      onGroupingChange([...grouping, id])
-    }
-  }
-
-  const groupableColumns = columns.filter(
-    (column) => (column as { accessorKey: string }).accessorKey !== "numeroAuto"
-  )
-
-  const groupButtons: { id: string; label: string }[] = []
-  for (const column of groupableColumns) {
-    const id = (column as { accessorKey: string }).accessorKey
-    groupButtons.push({ id, label: column.header as string })
-    if (id === "dataHora") {
-      groupButtons.push(...DATE_GROUP_OPTIONS.map(({ id, label }) => ({ id, label })))
-    }
-  }
-
+function StatusRow({ colSpan, children }: { colSpan: number; children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm text-muted-foreground">Agrupar por:</span>
-      {groupButtons.map(({ id, label }) => {
-        const order = grouping.indexOf(id)
-        return (
-          <Button
-            key={id}
-            type="button"
-            variant={order >= 0 ? "default" : "outline"}
-            size="sm"
-            onClick={() => toggleColumn(id)}
-          >
-            {order >= 0 ? `${order + 1}. ` : ""}
-            {label}
-          </Button>
-        )
-      })}
-      {grouping.length > 0 && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => onGroupingChange([])}
-        >
-          Limpar
-        </Button>
-      )}
-    </div>
+    <TableRow>
+      <TableCell colSpan={colSpan} className="py-6 text-center text-sm text-muted-foreground">
+        {children}
+      </TableCell>
+    </TableRow>
   )
 }
 
 function GroupLeafRows({
   filters,
   path,
+  columns,
 }: {
   filters: Record<string, string | undefined>
   path: GroupPathSegment[]
+  columns: ColumnDefinition[]
 }) {
   const [page, setPage] = useState(1)
   const pageSize = 20
@@ -220,7 +163,7 @@ function GroupLeafRows({
     <>
       {data.rows.map((row) => (
         <TableRow key={row.id}>
-          <AutoInfracaoRowCells row={row} />
+          <AutoInfracaoRowCells row={row} columns={columns} />
         </TableRow>
       ))}
       {data.total > pageSize && (
@@ -265,6 +208,7 @@ function GroupTreeNode({
   filters,
   expandedPaths,
   toggleExpanded,
+  columns,
 }: {
   node: GroupNode
   groupByFields: string[]
@@ -274,9 +218,10 @@ function GroupTreeNode({
   filters: Record<string, string | undefined>
   expandedPaths: Set<string>
   toggleExpanded: (key: string) => void
+  columns: ColumnDefinition[]
 }) {
   const accessor = groupAccessors[level]
-  const header = GROUP_LABEL_BY_ACCESSOR[accessor]
+  const header = GROUP_LABEL_BY_ID[accessor]
   const segment: GroupPathSegment = {
     key: groupByFields[level],
     value: node.value === null || node.value === undefined ? null : String(node.value),
@@ -300,7 +245,7 @@ function GroupTreeNode({
               <ChevronRight className="size-3.5" />
             )}
             <span className="font-medium">{header}:</span>
-            {accessor === "dataHora" && segment.value ? formatDataHora(segment.value) : segment.value ?? "—"}
+            {segment.value ?? "—"}
             <span className="text-muted-foreground">({node.total})</span>
           </span>
         </TableCell>
@@ -317,9 +262,10 @@ function GroupTreeNode({
             filters={filters}
             expandedPaths={expandedPaths}
             toggleExpanded={toggleExpanded}
+            columns={columns}
           />
         ))}
-      {isExpanded && isLeafLevel && <GroupLeafRows filters={filters} path={currentPath} />}
+      {isExpanded && isLeafLevel && <GroupLeafRows filters={filters} path={currentPath} columns={columns} />}
     </>
   )
 }
@@ -342,19 +288,20 @@ export function DataTable({
   filters: Record<string, string | undefined>
 }) {
   const [grouping, setGrouping] = useState<string[]>([])
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
-  const groupByFields = grouping.map((accessor) => API_FIELD_BY_ACCESSOR[accessor])
+  const [visibleIds, setVisibleIds] = useState<string[]>(loadVisibleColumns)
+  const groupByFields = grouping.map((accessor) => API_FIELD_BY_GROUP[accessor])
 
-  useEffect(() => {
-    setExpandedPaths(new Set())
-  }, [grouping.join(","), JSON.stringify(filters)])
+  // Grupos expandidos valem só para o agrupamento e os filtros atuais: ao mudar um deles, recolhe.
+  const resetKey = `${grouping.join(",")}|${JSON.stringify(filters)}`
+  const [expanded, setExpanded] = useState<{ key: string; paths: Set<string> }>({ key: resetKey, paths: new Set() })
+  const expandedPaths = expanded.key === resetKey ? expanded.paths : new Set<string>()
 
   function toggleExpanded(pathKey: string) {
-    setExpandedPaths((prev) => {
-      const next = new Set(prev)
+    setExpanded((prev) => {
+      const next = new Set(prev.key === resetKey ? prev.paths : [])
       if (next.has(pathKey)) next.delete(pathKey)
       else next.add(pathKey)
-      return next
+      return { key: resetKey, paths: next }
     })
   }
 
@@ -372,18 +319,57 @@ export function DataTable({
     exportAutosInfracaoPdf(filters, groupByFields)
   }
 
-  const table = useReactTable({
-    data: rows,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
+  function toggleGroup(id: string) {
+    setGrouping((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]))
+  }
+
+  function toggleColumn(id: string) {
+    setVisibleIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+      if (next.length === 0) return prev
+      const ordered = ALL_COLUMN_IDS.filter((c) => next.includes(c))
+      saveVisibleColumns(ordered)
+      return ordered
+    })
+  }
+
+  function resetColumns() {
+    saveVisibleColumns(ALL_COLUMN_IDS)
+    setVisibleIds(ALL_COLUMN_IDS)
+  }
+
+  const columns = COLUMN_DEFS.filter((c) => visibleIds.includes(c.id))
 
   const isGrouped = grouping.length > 0
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <GroupBySelector grouping={grouping} onGroupingChange={setGrouping} />
+        <div className="flex flex-wrap items-center gap-2">
+          <CheckListSheet
+            triggerLabel={grouping.length > 0 ? `Agrupar (${grouping.length})` : "Agrupar"}
+            icon={<Layers className="size-4" />}
+            title="Agrupar por"
+            description="A ordem da seleção define a ordem dos agrupamentos."
+            options={GROUP_OPTIONS}
+            selected={grouping}
+            onToggle={toggleGroup}
+            onClear={() => setGrouping([])}
+            clearLabel="Limpar"
+            showOrder
+          />
+          <CheckListSheet
+            triggerLabel="Colunas"
+            icon={<Columns3 className="size-4" />}
+            title="Colunas visíveis"
+            description="Ao menos uma coluna deve permanecer visível."
+            options={COLUMN_DEFS.map(({ id, label }) => ({ id, label }))}
+            selected={visibleIds}
+            onToggle={toggleColumn}
+            onClear={resetColumns}
+            clearLabel="Restaurar padrão"
+          />
+        </div>
         <div className="flex items-center gap-2">
           <Button type="button" onClick={handleExportPdf}>
             Exportar PDF
@@ -395,17 +381,24 @@ export function DataTable({
       </div>
       <Table>
         <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="bg-primary hover:bg-primary">
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="text-primary-foreground">
-                  {flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
+          <TableRow className="bg-primary hover:bg-primary">
+            {columns.map((column) => (
+              <TableHead key={column.id} className="text-primary-foreground">
+                {column.label}
+              </TableHead>
+            ))}
+          </TableRow>
         </TableHeader>
         <TableBody className="text-xs">
+          {isGrouped && groupsQuery.isLoading && (
+            <StatusRow colSpan={columns.length}>Carregando…</StatusRow>
+          )}
+          {isGrouped && groupsQuery.error && (
+            <StatusRow colSpan={columns.length}>Erro ao carregar os grupos: {groupsQuery.error.message}</StatusRow>
+          )}
+          {((isGrouped && groupsQuery.isSuccess && groupsQuery.data.length === 0) || (!isGrouped && rows.length === 0)) && (
+            <StatusRow colSpan={columns.length}>Nenhum auto encontrado para os filtros e o período selecionados.</StatusRow>
+          )}
           {isGrouped
             ? groupsQuery.data?.map((node, i) => (
                 <GroupTreeNode
@@ -418,11 +411,12 @@ export function DataTable({
                   filters={filters}
                   expandedPaths={expandedPaths}
                   toggleExpanded={toggleExpanded}
+                  columns={columns}
                 />
               ))
-            : table.getRowModel().rows.map((row) => (
+            : rows.map((row) => (
                 <TableRow key={row.id}>
-                  <AutoInfracaoRowCells row={row.original} />
+                  <AutoInfracaoRowCells row={row} columns={columns} />
                 </TableRow>
               ))}
         </TableBody>

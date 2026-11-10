@@ -13,6 +13,8 @@ export const FILTER_KEYS = [
   "data_fim",
   "competencia",
   "motivo_cancelamento",
+  "numero_auto",
+  "status",
 ] as const
 
 export type FilterKey = (typeof FILTER_KEYS)[number]

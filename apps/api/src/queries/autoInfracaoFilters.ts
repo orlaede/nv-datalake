@@ -8,6 +8,7 @@ import {
   MOTIVO_CANCELAMENTO_EXPR,
   ORIGEM_EXPR,
   PERIODO_EXPR,
+  STATUS_EXPR,
   TIPO_EXPR,
 } from "./goldStarExpressions"
 
@@ -23,6 +24,8 @@ export type AutoInfracaoFilters = {
   competencia?: string
   motivo_cancelamento?: string
   origem?: string
+  numero_auto?: string
+  status?: string
 }
 
 type ConditionBuilder = (paramIndex: number) => string
@@ -39,6 +42,8 @@ const CONDITION_BY_FILTER: Record<keyof AutoInfracaoFilters, ConditionBuilder> =
   competencia: (i) => `${COMPETENCIA_EXPR} = $${i}`,
   motivo_cancelamento: (i) => `${MOTIVO_CANCELAMENTO_EXPR} ILIKE $${i}`,
   origem: (i) => `${ORIGEM_EXPR} = $${i}`,
+  numero_auto: (i) => `ai.num_auto::text ILIKE $${i}`,
+  status: (i) => `${STATUS_EXPR} = $${i}`,
 }
 
 const LIKE_FILTERS: Partial<Record<keyof AutoInfracaoFilters, true>> = {
@@ -46,6 +51,7 @@ const LIKE_FILTERS: Partial<Record<keyof AutoInfracaoFilters, true>> = {
   local: true,
   equipamento: true,
   motivo_cancelamento: true,
+  numero_auto: true,
 }
 
 export function buildAutoInfracaoWhere(filters: AutoInfracaoFilters) {

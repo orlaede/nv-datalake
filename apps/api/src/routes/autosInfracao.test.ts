@@ -96,6 +96,23 @@ describe("GET /api/autos-infracao", () => {
     expect(listCall[1]).toEqual(["Quixadá", 20, 0])
   })
 
+  it("passes numero_auto and status filters through to the query params", async () => {
+    vi.mocked(pool.query)
+      .mockResolvedValueOnce({ rows: [{ count: "0" }] } as never)
+      .mockResolvedValueOnce({ rows: [] } as never)
+
+    const app = createApp()
+    const res = await request(app).get("/api/autos-infracao").query({ numero_auto: "456", status: "Cancelado" })
+
+    expect(res.status).toBe(200)
+    const [countCall, listCall] = vi.mocked(pool.query).mock.calls
+    const where = `WHERE ai.num_auto::text ILIKE $1 AND ${STATUS_EXPR} = $2`
+    expect(countCall[0]).toContain(where)
+    expect(listCall[0]).toContain(where)
+    expect(countCall[1]).toEqual(["%456%", "Cancelado"])
+    expect(listCall[1]).toEqual(["%456%", "Cancelado", 20, 0])
+  })
+
   it("returns 400 when page is non-numeric", async () => {
     const app = createApp()
     const res = await request(app).get("/api/autos-infracao").query({ page: "abc" })
