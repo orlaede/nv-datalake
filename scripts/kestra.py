@@ -48,12 +48,12 @@ class Client:
     def import_flow(self, source):
         self.validate(source)
         try:
-            self.request("GET", "/flows/nvdatalake/materialize_all")
+            self.request("GET", "/flows/nvdatalake/NV_datalake_Atualizacao_Completa")
         except HTTPError as error:
             if error.code != 404:
                 raise
             return self.request("POST", "/flows", source)
-        return self.request("PUT", "/flows/nvdatalake/materialize_all", source)
+        return self.request("PUT", "/flows/nvdatalake/NV_datalake_Atualizacao_Completa", source)
 
     def execute(self, full_refresh=False):
         boundary = "kestra-nvdatalake-inputs"
@@ -61,7 +61,7 @@ class Client:
             f"--{boundary}\r\nContent-Disposition: form-data; name=\"full_refresh\"\r\n\r\n"
             f"{str(full_refresh).lower()}\r\n--{boundary}--\r\n"
         ).encode()
-        return self.request("POST", "/executions/nvdatalake/materialize_all", body,
+        return self.request("POST", "/executions/nvdatalake/NV_datalake_Atualizacao_Completa", body,
                             f"multipart/form-data; boundary={boundary}")
 
     def wait(self, execution_id, timeout=1800):
@@ -73,7 +73,7 @@ def main():
     parser.add_argument("command", choices=["validate", "import", "run"])
     parser.add_argument("--url", default=os.environ.get("KESTRA_URL", "http://localhost:8082"))
     parser.add_argument("--flow", type=Path,
-                        default=Path(__file__).resolve().parents[1] / "kestra/flows/materialize_all.yml")
+                        default=Path(__file__).resolve().parents[1] / "kestra/flows/NV_datalake_Atualizacao_Completa.yml")
     parser.add_argument("--full-refresh", action="store_true")
     parser.add_argument("--timeout", type=int, default=1800)
     args = parser.parse_args()
