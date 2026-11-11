@@ -31,3 +31,6 @@ logs/
 # Python test/runtime caches
 __pycache__/
 .pytest_cache/
+
+/factory/jobs/
+/.worktrees/
