@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context"
 
 const primaryNavItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.read" },
-  { to: "/autos", label: "Listagem", icon: ListChecks, permission: "autos.read" },
+  { to: "/autos", label: "Autos de Infração", icon: ListChecks, permission: "autos.read" },
   { to: "/processamento", label: "Processamento", icon: Hourglass, permission: "dashboard.read" },
   { to: "/processamento/retornos", label: "Retornos de Processamento", icon: ListX, permission: "autos.read" },
 ]

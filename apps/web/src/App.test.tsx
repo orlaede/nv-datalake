@@ -53,7 +53,7 @@ describe("App", () => {
 
     expect(screen.getByRole("navigation", { name: "Navegação principal" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Abrir Dashboard" })).toHaveAttribute("href", "/")
-    expect(screen.getByRole("link", { name: "Abrir Listagem" })).toHaveAttribute("href", "/autos")
+    expect(screen.getByRole("link", { name: "Abrir Autos de Infração" })).toHaveAttribute("href", "/autos")
 
     fireEvent.click(screen.getByRole("button", { name: "Expandir menu lateral" }))
 
