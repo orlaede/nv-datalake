@@ -20,7 +20,7 @@ from scripts.kestra import Client
 
 pytestmark = pytest.mark.skipif(not os.environ.get("KESTRA_TEST_URL"), reason="Run scripts/test_kestra.sh for real Kestra integration tests")
 ROOT = Path(__file__).resolve().parents[2]
-_VARIABLES = yaml.safe_load((ROOT / "kestra/flows/materialize_all.yml").read_text())["variables"]
+_VARIABLES = yaml.safe_load((ROOT / "kestra/flows/NV_datalake_Atualizacao_Completa.yml").read_text())["variables"]
 SOURCES = build_sources(_VARIABLES["dbname"], _VARIABLES["schemas"], _VARIABLES["tables"], _VARIABLES["optional_tables"])
 # fixtures.sql creates the optional tables (ait_retorno, codigo_retorno) only in these schemas.
 WITH_AIT_RETORNO = {"nvtr_sc_pomerode", "nvtr_pr_curitiba"}
@@ -65,7 +65,7 @@ def databases():
 @pytest.fixture(scope="module")
 def client():
     client = Client(os.environ["KESTRA_TEST_URL"])
-    source = (ROOT / "kestra/flows/materialize_all.yml").read_bytes()
+    source = (ROOT / "kestra/flows/NV_datalake_Atualizacao_Completa.yml").read_bytes()
     validation = client.validate(source)
     assert not any(flow.get("constraints") or flow.get("violations") for flow in validation)
     client.import_flow(source)
@@ -101,7 +101,7 @@ def test_all_models_tests_profiles_and_artifacts(execution, client):
         assert model["schema"] in {"bronze", "silver", "gold"}
         assert model["config"]["materialized"] == "table"
         assert any(node["resource_type"] == "test" and model_id in node["depends_on"]["nodes"] for node in manifest["nodes"].values()), model_id
-    flow = client.request("GET", "/flows/nvdatalake/materialize_all")
+    flow = client.request("GET", "/flows/nvdatalake/NV_datalake_Atualizacao_Completa")
     assert flow["triggers"][0]["disabled"] is True
     assert flow["triggers"][0]["timezone"] == "America/Sao_Paulo"
     assert flow["concurrency"]["limit"] == 1

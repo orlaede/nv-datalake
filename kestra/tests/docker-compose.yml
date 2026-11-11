@@ -84,7 +84,7 @@ services:
       kestra:
         condition: service_healthy
     entrypoint: ["python", "/opt/nvdatalake/scripts/kestra.py"]
-    command: ["import", "--url", "http://kestra:8080", "--flow", "/opt/kestra/flows/materialize_all.yml"]
+    command: ["import", "--url", "http://kestra:8080", "--flow", "/opt/kestra/flows/NV_datalake_Atualizacao_Completa.yml"]
     environment:
       KESTRA_API_USER: admin@kestra.local
       KESTRA_API_PASSWORD: Fixture123!

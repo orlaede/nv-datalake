@@ -28,7 +28,7 @@ Comando: `./scripts/test_kestra.sh`.
 ## Ambiente configurado no projeto
 
 - Kestra atualizado e saudável em `http://localhost:8082`.
-- Fluxo `nvdatalake.materialize_all` importado, revisão 1; validação sem
+- Fluxo `nvdatalake.NV_datalake_Atualizacao_Completa` importado, revisão 1; validação sem
   restrições, warnings ou depreciações. Cron diário desabilitado.
 - Conexões de origem e destino verificadas; as 14 tabelas de origem existem.
 - `dbt debug` aprovado.
