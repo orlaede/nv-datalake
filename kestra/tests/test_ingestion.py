@@ -11,7 +11,7 @@ def test_sources_come_from_flow_variables():
 
     from kestra.ingest import build_sources
 
-    flow = yaml.safe_load((Path(__file__).resolve().parents[1] / "flows/materialize_all.yml").read_text())
+    flow = yaml.safe_load((Path(__file__).resolve().parents[1] / "flows/NV_datalake_Atualizacao_Completa.yml").read_text())
     variables = flow["variables"]
     sources = build_sources(variables["dbname"], variables["schemas"], variables["tables"], variables["optional_tables"])
     assert sources[0].key == "nvtr_ce_caucaia_amostra"

@@ -1,4 +1,4 @@
-id: materialize_all
+id: NV_datalake_Atualizacao_Completa
 namespace: nvdatalake
 description: Todas as origens Bronze e todo o projeto dbt Bronze/Silver/Gold.
 

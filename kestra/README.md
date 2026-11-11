@@ -21,9 +21,11 @@ O serviço `kestra-import` aguarda o healthcheck e valida/importa o fluxo
 versionado. Ele deve terminar com código 0. A importação atualiza um fluxo
 existente, sem apagar o histórico. Execute o mesmo comando após alterações
 nos modelos, código ou fluxo para reconstruir a imagem e atualizar a definição.
+O fluxo antigo `nvdatalake.materialize_all` (de antes da renomeação) não é
+apagado pela importação; remova-o manualmente na UI do Kestra.
 
 Acesse **http://localhost:8082** e entre com `KESTRA_API_USER` e
-`KESTRA_API_PASSWORD`. No namespace `nvdatalake`, execute `materialize_all`.
+`KESTRA_API_PASSWORD`. No namespace `nvdatalake`, execute `NV_datalake_Atualizacao_Completa`.
 Para acesso remoto direto, use **http://<host>:8082** e libere TCP `8082`
 para seu IP no firewall/Security Group. A porta é publicada em todas as
 interfaces. Como alternativa, use túnel SSH:
@@ -42,7 +44,7 @@ use `host.docker.internal` para bancos no host, em vez de `localhost`.
 ## Origens de dados
 
 As origens ficam em `variables` de
-[`flows/materialize_all.yml`](flows/materialize_all.yml): `dbname` (banco),
+[`flows/NV_datalake_Atualizacao_Completa.yml`](flows/NV_datalake_Atualizacao_Completa.yml): `dbname` (banco),
 `schemas` (lista de schemas) e `tables` (lista única, igual para todos os
 schemas). Cada par schema/tabela vira a tabela Bronze
 `<dbname>_<schema>__<tabela>`. A conexão vem de `SOURCE_<DBNAME>_DB_*` (ou

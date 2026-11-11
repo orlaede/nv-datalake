@@ -23,7 +23,7 @@ nvtr (schemas regionais) --Kestra/ingest.py--> nvdatalake.bronze --dbt--> silver
 
 | Parte | Local | Papel |
 | --- | --- | --- |
-| Orquestração | `kestra/flows/materialize_all.yml` | Único fluxo: ingestão Bronze, `dbt build`, `dbt docs` |
+| Orquestração | `kestra/flows/NV_datalake_Atualizacao_Completa.yml` | Único fluxo: ingestão Bronze, `dbt build`, `dbt docs` |
 | Ingestão (EL) | `kestra/ingest.py` | Copia tabelas das origens para `bronze.*` (Python, pandas, SQLAlchemy) |
 | Transformação | `dbt/nvdatalake/` | Staging, Silver (dim/fato) e Gold (apresentação) |
 | Auth e migrações | `db/migrations/` | SQL idempotente aplicado manualmente ao Data Lake |
@@ -37,7 +37,7 @@ nvtr (schemas regionais) --Kestra/ingest.py--> nvdatalake.bronze --dbt--> silver
 - **Kestra é o único orquestrador.** Dagster foi removido; não reintroduza
   referências a ele.
 - **A lista de origens vive só no fluxo.** `variables.dbname`, `schemas` e
-  `tables` em `materialize_all.yml` são a fonte única. `pluginDefaults` as
+  `tables` em `NV_datalake_Atualizacao_Completa.yml` são a fonte única. `pluginDefaults` as
   repassa à ingestão e ao dbt como `NVDATALAKE_DBNAME`, `NVDATALAKE_SCHEMAS` e
   `NVDATALAKE_TABLES` (listas JSON). Não duplique essa lista em Python ou dbt.
 - **Todos os schemas têm as mesmas tabelas.** Adicionar um schema é acrescentá-lo
