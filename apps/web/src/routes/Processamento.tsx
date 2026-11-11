@@ -98,7 +98,7 @@ export function Processamento() {
           xKey="tipo"
           yKey="total"
           config={{ total: { label: "Autos", color: "var(--chart-1)" } }}
-          yAxisWidth={160}
+          yAxisWidth={340}
           rowHeight={36}
           showValues
           onBarClick={(row) => {
