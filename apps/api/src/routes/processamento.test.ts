@@ -93,6 +93,29 @@ describe("GET /api/processamento/stats", () => {
     ])
     const [sql, params] = vi.mocked(pool.query).mock.calls[0]
     expect(sql).toContain("count(DISTINCT ai.sk_auto)")
-    expect(params).toEqual(["Pomerode"])
+    expect(sql).toContain("c.descricao <> ALL ($2::text[])")
+    expect(params).toEqual(["Pomerode", ["SUCESSO", "Não Informado"]])
+  })
+
+  it("retornos/autos: lista autos do retorno selecionado com paginação", async () => {
+    vi.mocked(pool.query)
+      .mockResolvedValueOnce({ rows: [{ count: "3" }] } as never)
+      .mockResolvedValueOnce({ rows: [{ id: 1, numero_auto: "10" }] } as never)
+    const res = await request(createApp())
+      .get("/api/processamento/retornos/autos")
+      .query({ retorno: "PLACA INVÁLIDA", origem: "Pomerode", page: "2", pageSize: "10" })
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ total: 3, page: 2, pageSize: 10, rows: [{ id: 1, numero_auto: "10" }] })
+    const [sql, params] = vi.mocked(pool.query).mock.calls[1]
+    expect(sql).toContain("c.descricao = $2")
+    expect(params).toEqual(["Pomerode", "PLACA INVÁLIDA", 10, 10])
+  })
+
+  it("retornos/autos: rejeita retorno ausente ou ignorado", async () => {
+    for (const query of [{}, { retorno: "SUCESSO" }, { retorno: "Não Informado" }]) {
+      const res = await request(createApp()).get("/api/processamento/retornos/autos").query(query)
+      expect(res.status).toBe(400)
+    }
+    expect(pool.query).not.toHaveBeenCalled()
   })
 })

@@ -278,7 +278,12 @@ export function DataTable({
   onPageChange,
   onPageSizeChange,
   filters,
+  groupable = true,
+  exportable = true,
 }: {
+  /** Desligue `groupable`/`exportable` quando as linhas não vêm dos endpoints de listagem geral. */
+  groupable?: boolean
+  exportable?: boolean
   rows: AutoInfracaoRow[]
   page: number
   pageSize: number
@@ -346,18 +351,20 @@ export function DataTable({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <CheckListSheet
-            triggerLabel={grouping.length > 0 ? `Agrupar (${grouping.length})` : "Agrupar"}
-            icon={<Layers className="size-4" />}
-            title="Agrupar por"
-            description="A ordem da seleção define a ordem dos agrupamentos."
-            options={GROUP_OPTIONS}
-            selected={grouping}
-            onToggle={toggleGroup}
-            onClear={() => setGrouping([])}
-            clearLabel="Limpar"
-            showOrder
-          />
+          {groupable && (
+            <CheckListSheet
+              triggerLabel={grouping.length > 0 ? `Agrupar (${grouping.length})` : "Agrupar"}
+              icon={<Layers className="size-4" />}
+              title="Agrupar por"
+              description="A ordem da seleção define a ordem dos agrupamentos."
+              options={GROUP_OPTIONS}
+              selected={grouping}
+              onToggle={toggleGroup}
+              onClear={() => setGrouping([])}
+              clearLabel="Limpar"
+              showOrder
+            />
+          )}
           <CheckListSheet
             triggerLabel="Colunas"
             icon={<Columns3 className="size-4" />}
@@ -370,14 +377,16 @@ export function DataTable({
             clearLabel="Restaurar padrão"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <Button type="button" onClick={handleExportPdf}>
-            Exportar PDF
-          </Button>
-          <Button type="button" onClick={handleExportExcel}>
-            Exportar Excel
-          </Button>
-        </div>
+        {exportable && (
+          <div className="flex items-center gap-2">
+            <Button type="button" onClick={handleExportPdf}>
+              Exportar PDF
+            </Button>
+            <Button type="button" onClick={handleExportExcel}>
+              Exportar Excel
+            </Button>
+          </div>
+        )}
       </div>
       <Table>
         <TableHeader>

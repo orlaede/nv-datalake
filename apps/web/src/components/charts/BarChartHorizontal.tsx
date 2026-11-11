@@ -12,6 +12,7 @@ export function BarChartHorizontal({
   yAxisWidth = 120,
   showValues = false,
   rowHeight,
+  onBarClick,
 }: ChartProps & {
   className?: string
   tickColor?: string
@@ -20,6 +21,8 @@ export function BarChartHorizontal({
   showValues?: boolean
   /** Altura por categoria (px); a altura do gráfico acompanha o nº de linhas. */
   rowHeight?: number
+  /** Torna as barras clicáveis; recebe a linha de dados da barra. */
+  onBarClick?: (row: Record<string, unknown>) => void
 }) {
   const keys = Array.isArray(yKey) ? yKey : [yKey]
   const tick = { fontSize: 11, ...(tickColor ? { fill: tickColor } : {}) }
@@ -44,7 +47,14 @@ export function BarChartHorizontal({
         />
         <ChartTooltip cursor={{ fill: "var(--muted)", opacity: 0.4 }} content={<ChartTooltipContent />} />
         {keys.map((key) => (
-          <Bar key={key} dataKey={key} fill={`var(--color-${key})`} radius={4}>
+          <Bar
+            key={key}
+            dataKey={key}
+            fill={`var(--color-${key})`}
+            radius={4}
+            className={onBarClick ? "cursor-pointer" : undefined}
+            onClick={onBarClick ? (entry) => onBarClick(entry.payload as Record<string, unknown>) : undefined}
+          >
             {showValues && <LabelList dataKey={key} position="right" className="fill-foreground text-xs" />}
           </Bar>
         ))}

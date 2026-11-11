@@ -1,3 +1,4 @@
+import { useLocation, useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { KpiCard } from "@/components/dashboard/KpiCard"
 import { ChartCard } from "@/components/dashboard/ChartCard"
@@ -26,6 +27,8 @@ type StatsResponse = {
 
 export function Processamento() {
   const { filters } = useFilters()
+  const navigate = useNavigate()
+  const { search } = useLocation()
 
   const { data } = useQuery({
     queryKey: ["processamento-stats", filters],
@@ -78,10 +81,10 @@ export function Processamento() {
       </ChartCard>
 
       <ChartCard
-        title="Autos por Tipo de Retorno"
+        title="Retornos de Processamentos sem Sucesso"
         dataTable={
           <ChartDataTable
-            caption="Autos por tipo de retorno"
+            caption="Autos por tipo de retorno sem sucesso"
             columns={[
               { key: "tipo", label: "Tipo de retorno" },
               { key: "total", label: "Autos" },
@@ -98,6 +101,11 @@ export function Processamento() {
           yAxisWidth={160}
           rowHeight={36}
           showValues
+          onBarClick={(row) => {
+            const params = new URLSearchParams(search)
+            params.set("retorno", String(row.tipo))
+            navigate(`/processamento/retornos?${params.toString()}`)
+          }}
         />
       </ChartCard>
     </div>

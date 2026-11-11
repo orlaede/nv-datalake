@@ -147,7 +147,7 @@ function parseGroupBy(query: Record<string, unknown>): GroupKey[] {
     .filter((key): key is GroupKey => GROUP_KEYS.has(key))
 }
 
-const LIST_COLUMNS_SQL = `
+export const LIST_COLUMNS_SQL = `
        ai.data_hora AS data_hora,
        ${AGENTE_EXPR} AS agente,
        ${LOCAL_EXPR} AS local,
@@ -190,7 +190,7 @@ const SUGGESTION_FIELDS = {
   motivo_cancelamento: MOTIVO_CANCELAMENTO_EXPR,
 } as const
 
-function extractFilters(query: Record<string, unknown>): AutoInfracaoFilters {
+export function extractFilters(query: Record<string, unknown>): AutoInfracaoFilters {
   return {
     agente: typeof query.agente === "string" ? query.agente : undefined,
     local: typeof query.local === "string" ? query.local : undefined,

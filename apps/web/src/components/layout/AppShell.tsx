@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
-import { Hourglass, LayoutDashboard, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, ShieldCheck, Users } from "lucide-react"
+import { Hourglass, ListX, LayoutDashboard, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, ShieldCheck, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
@@ -9,6 +9,7 @@ const primaryNavItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.read" },
   { to: "/autos", label: "Listagem", icon: ListChecks, permission: "autos.read" },
   { to: "/processamento", label: "Processamento", icon: Hourglass, permission: "dashboard.read" },
+  { to: "/processamento/retornos", label: "Retornos de Processamento", icon: ListX, permission: "autos.read" },
 ]
 
 const settingsNavItems = [

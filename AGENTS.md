@@ -97,6 +97,10 @@ nvtr (schemas regionais) --Kestra/ingest.py--> nvdatalake.bronze --dbt--> silver
   ("Autos de Infração não Processados") mostra só autos com `status_arquivamento` diferente de
   `PROCESSADO_SUCESSO` (nulo conta como não processado); KPIs: "Total de Autos" (todos do universo), "Autos processados" (`PROCESSADO_SUCESSO`) e dentro/fora do prazo (só não processados).
   Faixas: diárias 1..N, de 5 em 5 até 30, `>30`.
+  O gráfico "Retornos de Processamentos sem Sucesso" (`/api/processamento/retornos`) exclui os
+  retornos `SUCESSO` e `Não Informado`; clicar numa barra abre `/processamento/retornos?retorno=<descrição>`
+  ("Retornos de Processamento", menu), grid dos autos com aquele retorno
+  (`/api/processamento/retornos/autos`, mesmos filtros e colunas da Listagem; sem agrupar/exportar).
 - **Gold:** camada autocontida. Dimensões espelhadas (`*_gold`) e fatos estrela
   (`fac_auto_infracao`, `fac_ait_retorno`, `fac_auto_infracao_mensal`). Rótulos e CASEs de
   apresentação ficam na API, não no dbt.

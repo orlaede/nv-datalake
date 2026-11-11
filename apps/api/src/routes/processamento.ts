@@ -2,8 +2,12 @@ import { Router } from "express"
 import { pool } from "../db"
 import { buildAutoInfracaoWhere } from "../queries/autoInfracaoFilters"
 import { GOLD_STAR_FROM } from "../queries/goldStarExpressions"
+import { LIST_COLUMNS_SQL, extractFilters } from "./autosInfracao"
 
 export const processamentoRouter = Router()
+
+// Retornos que não indicam falha de processamento: ficam fora do gráfico e da listagem.
+const RETORNOS_IGNORADOS = ["SUCESSO", "Não Informado"]
 
 type Faixa = { rotulo: string; de: number; ate: number | null; total: number; dentroPrazo: boolean }
 
@@ -94,7 +98,7 @@ processamentoRouter.get("/api/processamento/retornos", async (req, res) => {
     data_inicio: str(req.query.data_inicio),
     data_fim: str(req.query.data_fim),
   })
-  const extra = "ai.num_dias >= 1 AND ai.sk_auto > 0"
+  const extra = `ai.num_dias >= 1 AND ai.sk_auto > 0 AND c.descricao <> ALL ($${params.length + 1}::text[])`
   const where = clause ? `${clause} AND ${extra}` : `WHERE ${extra}`
   const result = await pool.query(
     `SELECT c.descricao AS tipo, count(DISTINCT ai.sk_auto) AS total
@@ -104,7 +108,39 @@ processamentoRouter.get("/api/processamento/retornos", async (req, res) => {
      ${where}
      GROUP BY c.descricao
      ORDER BY total DESC, c.descricao`,
-    params,
+    [...params, RETORNOS_IGNORADOS],
   )
   res.json({ retornos: result.rows.map((row) => ({ tipo: row.tipo, total: Number(row.total) })) })
+})
+
+processamentoRouter.get("/api/processamento/retornos/autos", async (req, res) => {
+  const retorno = typeof req.query.retorno === "string" ? req.query.retorno : ""
+  if (!retorno || RETORNOS_IGNORADOS.includes(retorno)) {
+    res.status(400).json({ error: "retorno is required" })
+    return
+  }
+  const num = (v: unknown, fallback: number) => (v !== undefined && Number.isFinite(Number(v)) ? Number(v) : fallback)
+  const page = Math.max(1, num(req.query.page, 1))
+  const pageSize = Math.min(100, Math.max(1, num(req.query.pageSize, 25)))
+
+  const { clause, params } = buildAutoInfracaoWhere(extractFilters(req.query as Record<string, unknown>))
+  params.push(retorno)
+  const extra = `ai.num_dias >= 1 AND ai.sk_auto > 0 AND EXISTS (
+       SELECT 1 FROM gold.fac_ait_retorno r
+         JOIN gold.dim_codigo_retorno c ON c.sk_codigo_retorno = r.sk_codigo_retorno
+       WHERE r.sk_auto = ai.sk_auto AND c.descricao = $${params.length})`
+  const where = clause ? `${clause} AND ${extra}` : `WHERE ${extra}`
+
+  const countResult = await pool.query(`SELECT COUNT(*) FROM ${GOLD_STAR_FROM} ${where}`, params)
+  const total = Number(countResult.rows[0].count)
+  const listResult = await pool.query(
+    `SELECT ROW_NUMBER() OVER (ORDER BY ai.data_hora DESC NULLS LAST) AS id,
+       ${LIST_COLUMNS_SQL}
+     FROM ${GOLD_STAR_FROM}
+     ${where}
+     ORDER BY ai.data_hora DESC NULLS LAST
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, pageSize, (page - 1) * pageSize],
+  )
+  res.json({ total, page, pageSize, rows: listResult.rows })
 })
