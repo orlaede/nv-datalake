@@ -27,11 +27,13 @@ describe("Processamento", () => {
         ok: true,
         json: async () => ({
           prazo: 30,
+          totalAutos: 999,
+          processados: 444,
           dentroPrazo: 777,
           foraPrazo: 555,
           faixas: [
-            { rotulo: "0-30", de: 0, ate: 30, total: 120, processados: 100, dentroPrazo: true },
-            { rotulo: "31+", de: 31, ate: null, total: 45, processados: 5, dentroPrazo: false },
+            { rotulo: "0-30", de: 0, ate: 30, total: 120, dentroPrazo: true },
+            { rotulo: "31+", de: 31, ate: null, total: 45, dentroPrazo: false },
           ],
         }),
       })
@@ -43,8 +45,12 @@ describe("Processamento", () => {
     expect(screen.getByRole("heading", { name: "Processamento" })).toBeInTheDocument()
     await waitFor(() => expect(screen.getByText("777")).toBeInTheDocument())
     expect(screen.getByText("555")).toBeInTheDocument()
-    expect(screen.getByText("Dentro do prazo (≤ 30 dias)")).toBeInTheDocument()
-    expect(screen.getByText("Fora do prazo (> 30 dias)")).toBeInTheDocument()
+    expect(screen.getByText("999")).toBeInTheDocument()
+    expect(screen.getByText("444")).toBeInTheDocument()
+    expect(screen.getByText("Total de Autos")).toBeInTheDocument()
+    expect(screen.getByText("Autos processados")).toBeInTheDocument()
+    expect(screen.getByText("Pendentes dentro do prazo (≤ 30 dias)")).toBeInTheDocument()
+    expect(screen.getByText("Pendentes fora do prazo (> 30 dias)")).toBeInTheDocument()
     expect(screen.getAllByText("0-30").length).toBeGreaterThan(0)
   })
 })

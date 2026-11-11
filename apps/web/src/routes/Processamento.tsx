@@ -11,6 +11,8 @@ import { apiGet } from "@/lib/api"
 
 type StatsResponse = {
   prazo: number | null
+  totalAutos: number
+  processados: number
   dentroPrazo: number
   foraPrazo: number
   faixas: {
@@ -18,7 +20,6 @@ type StatsResponse = {
     de: number
     ate: number | null
     total: number
-    processados: number
     dentroPrazo: boolean
   }[]
 }
@@ -37,28 +38,27 @@ export function Processamento() {
   })
 
   const prazo = data?.prazo != null ? String(data.prazo) : "—"
-  const faixas =
-    data?.faixas.map((f) => ({ ...f, pendentes: f.total - f.processados })) ?? []
+  const faixas = data?.faixas ?? []
 
   return (
     <div className="flex flex-col gap-6 p-6">
       <PageHeader title="Processamento" />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <KpiCard label={`Dentro do prazo (≤ ${prazo} dias)`} value={String(data?.dentroPrazo ?? "—")} />
-        <KpiCard label={`Fora do prazo (> ${prazo} dias)`} value={String(data?.foraPrazo ?? "—")} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Total de Autos" value={String(data?.totalAutos ?? "—")} />
+        <KpiCard label="Autos processados" value={String(data?.processados ?? "—")} />
+        <KpiCard label={`Pendentes dentro do prazo (≤ ${prazo} dias)`} value={String(data?.dentroPrazo ?? "—")} />
+        <KpiCard label={`Pendentes fora do prazo (> ${prazo} dias)`} value={String(data?.foraPrazo ?? "—")} valueClassName="text-destructive" />
       </div>
 
       <ChartCard
-        title="Autos por Faixa de Dias"
+        title="Autos de Infração não Processados"
         dataTable={
           <ChartDataTable
-            caption="Autos por faixa de dias"
+            caption="Autos de infração não processados por faixa de dias"
             columns={[
               { key: "rotulo", label: "Faixa (dias)" },
-              { key: "total", label: "Total" },
-              { key: "processados", label: "Processados" },
-              { key: "pendentes", label: "Pendentes" },
+              { key: "total", label: "Não processados" },
               { key: "situacao", label: "Prazo" },
             ]}
             rows={faixas.map((f) => ({ ...f, situacao: f.dentroPrazo ? "Dentro do prazo" : "Fora do prazo" }))}
@@ -68,10 +68,7 @@ export function Processamento() {
         <BarChartStacked
           data={faixas}
           xKey="rotulo"
-          series={[
-            { key: "processados", label: "Processados", color: "var(--chart-1)" },
-            { key: "pendentes", label: "Pendentes", color: "var(--warning)" },
-          ]}
+          series={[{ key: "total", label: "Não processados", color: "var(--chart-1)" }]}
           totalKey="total"
           topColor={(r) => corPendentes(Boolean(r.dentroPrazo))}
           hatch={(r) => !r.dentroPrazo}

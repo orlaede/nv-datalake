@@ -93,8 +93,10 @@ nvtr (schemas regionais) --Kestra/ingest.py--> nvdatalake.bronze --dbt--> silver
 - **Dashboard Processamento** (`/processamento`, `GET /api/processamento/stats`,
   permissão `dashboard.read`): universo = `gold.fac_auto_infracao` com `num_dias >= 1`
   (0 = auto de hoje, fora). Prazo N = `num_dias_retencao_processamento` da origem (sem N, o auto
-  fica fora). Dentro do prazo = `num_dias <= N`. Processado = auto com retorno em
-  `fac_ait_retorno` (`count(distinct sk_auto)`). Faixas: diárias 1..N, de 5 em 5 até 30, `>30`.
+  fica fora). Dentro do prazo = `num_dias <= N`. O gráfico de faixas
+  ("Autos de Infração não Processados") mostra só autos com `status_arquivamento` diferente de
+  `PROCESSADO_SUCESSO` (nulo conta como não processado); KPIs: "Total de Autos" (todos do universo), "Autos processados" (`PROCESSADO_SUCESSO`) e dentro/fora do prazo (só não processados).
+  Faixas: diárias 1..N, de 5 em 5 até 30, `>30`.
 - **Gold:** camada autocontida. Dimensões espelhadas (`*_gold`) e fatos estrela
   (`fac_auto_infracao`, `fac_ait_retorno`, `fac_auto_infracao_mensal`). Rótulos e CASEs de
   apresentação ficam na API, não no dbt.

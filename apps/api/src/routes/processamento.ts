@@ -5,13 +5,13 @@ import { GOLD_STAR_FROM } from "../queries/goldStarExpressions"
 
 export const processamentoRouter = Router()
 
-type Faixa = { rotulo: string; de: number; ate: number | null; total: number; processados: number; dentroPrazo: boolean }
+type Faixa = { rotulo: string; de: number; ate: number | null; total: number; dentroPrazo: boolean }
 
 const LIMITE_FAIXAS = 30
 const LARGURA_FAIXA = 5
 
 function buildFaixas(nmax: number, prazo: number): Faixa[] {
-  const faixas: Omit<Faixa, "total" | "processados">[] = []
+  const faixas: Omit<Faixa, "total">[] = []
   const add = (de: number, ate: number | null, rotulo: string) =>
     faixas.push({ rotulo, de, ate, dentroPrazo: ate !== null && ate <= prazo })
 
@@ -23,7 +23,7 @@ function buildFaixas(nmax: number, prazo: number): Faixa[] {
     de = ate + 1
   }
   add(limite + 1, null, `>${limite}`)
-  return faixas.map((f) => ({ ...f, total: 0, processados: 0 }))
+  return faixas.map((f) => ({ ...f, total: 0 }))
 }
 
 processamentoRouter.get("/api/processamento/stats", async (req, res) => {
@@ -47,7 +47,7 @@ processamentoRouter.get("/api/processamento/stats", async (req, res) => {
   const prazoRaw = prazoResult.rows[0]?.prazo
   const prazo = prazoRaw === null || prazoRaw === undefined ? null : Number(prazoRaw)
   if (prazo === null) {
-    res.json({ prazo: null, dentroPrazo: 0, foraPrazo: 0, faixas: [] })
+    res.json({ prazo: null, totalAutos: 0, processados: 0, dentroPrazo: 0, foraPrazo: 0, faixas: [] })
     return
   }
 
@@ -57,10 +57,7 @@ processamentoRouter.get("/api/processamento/stats", async (req, res) => {
     `SELECT ai.num_dias AS num_dias,
             p.num_dias_retencao_processamento AS prazo,
             count(*) AS total,
-            count(*) FILTER (
-              WHERE ai.sk_auto > 0
-                AND EXISTS (SELECT 1 FROM gold.fac_ait_retorno r WHERE r.sk_auto = ai.sk_auto)
-            ) AS processados
+            count(*) FILTER (WHERE ai.status_arquivamento IS DISTINCT FROM 'PROCESSADO_SUCESSO') AS nao_processados
      FROM ${GOLD_STAR_FROM}
        JOIN gold.dim_parametro_origem p ON p.sk_origem = ai.sk_origem
      ${where}
@@ -69,22 +66,25 @@ processamentoRouter.get("/api/processamento/stats", async (req, res) => {
   )
 
   const faixas = buildFaixas(prazo, prazo)
+  let totalAutos = 0
+  let naoProcessadosTotal = 0
   let dentroPrazo = 0
   let foraPrazo = 0
   for (const row of result.rows) {
     const dias = Number(row.num_dias)
     const total = Number(row.total)
-    const processados = Number(row.processados)
-    if (dias <= Number(row.prazo)) dentroPrazo += total
-    else foraPrazo += total
+    const naoProcessados = Number(row.nao_processados)
+    totalAutos += total
+    naoProcessadosTotal += naoProcessados
+    if (dias <= Number(row.prazo)) dentroPrazo += naoProcessados
+    else foraPrazo += naoProcessados
     const faixa = faixas.find((f) => dias >= f.de && (f.ate === null || dias <= f.ate))
     if (faixa) {
-      faixa.total += total
-      faixa.processados += processados
+      faixa.total += naoProcessados
     }
   }
 
-  res.json({ prazo, dentroPrazo, foraPrazo, faixas })
+  res.json({ prazo, totalAutos, processados: totalAutos - naoProcessadosTotal, dentroPrazo, foraPrazo, faixas })
 })
 
 processamentoRouter.get("/api/processamento/retornos", async (req, res) => {
