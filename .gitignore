@@ -34,3 +34,4 @@ __pycache__/
 
 /factory/jobs/
 /.worktrees/
+.claude/launch.json
