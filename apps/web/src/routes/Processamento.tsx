@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
+import { CheckCircle2, Clock3, FileText, TriangleAlert } from "lucide-react"
 import { KpiCard } from "@/components/dashboard/KpiCard"
 import { ChartCard } from "@/components/dashboard/ChartCard"
 import { PageHeader } from "@/components/dashboard/PageHeader"
@@ -56,10 +57,10 @@ export function Processamento() {
       <PageHeader title="Processamento" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Total de Autos" value={String(data?.totalAutos ?? "—")} />
-        <KpiCard label="Autos processados" value={String(data?.processados ?? "—")} />
-        <KpiCard label={`Pendentes dentro do prazo (≤ ${prazo} dias)`} value={String(data?.dentroPrazo ?? "—")} />
-        <KpiCard label={`Pendentes fora do prazo (> ${prazo} dias)`} value={String(data?.foraPrazo ?? "—")} valueClassName="text-destructive" />
+        <KpiCard label="Total de Autos" value={String(data?.totalAutos ?? "—")} icon={<FileText className="size-4" />} />
+        <KpiCard label="Autos processados" value={String(data?.processados ?? "—")} icon={<CheckCircle2 className="size-4" />} />
+        <KpiCard label="Dentro do Prazo" value={String(data?.dentroPrazo ?? "—")} icon={<Clock3 className="size-4" />} />
+        <KpiCard label="Fora do prazo" value={String(data?.foraPrazo ?? "—")} icon={<TriangleAlert className="size-4" />} valueClassName="text-destructive" />
       </div>
 
       {!filters.origem && (
