@@ -16,6 +16,14 @@ type StatsResponse = {
   processados: number
   dentroPrazo: number
   foraPrazo: number
+  origens?: {
+    origem: string
+    prazo: number
+    total: number
+    dentroPrazo: number
+    proximoLimite: number
+    foraPrazo: number
+  }[]
   faixas: {
     rotulo: string
     de: number
@@ -54,6 +62,46 @@ export function Processamento() {
         <KpiCard label={`Pendentes fora do prazo (> ${prazo} dias)`} value={String(data?.foraPrazo ?? "—")} valueClassName="text-destructive" />
       </div>
 
+      {!filters.origem && (
+        <ChartCard
+          title="Autos não processados por origem"
+          dataTable={
+            <ChartDataTable
+              caption="Autos não processados por origem e situação do prazo de retenção"
+              columns={[
+                { key: "origem", label: "Origem" },
+                { key: "prazo", label: "Limite de retenção (dias)" },
+                { key: "dentroPrazo", label: "Dentro do prazo" },
+                { key: "proximoLimite", label: "A 1–2 dias do limite" },
+                { key: "foraPrazo", label: "Fora do prazo" },
+                { key: "total", label: "Total não processado" },
+              ]}
+              rows={data?.origens ?? []}
+            />
+          }
+        >
+          <p className="mb-2 text-xs text-muted-foreground">
+            Cada origem usa seu próprio limite de dias de retenção.
+          </p>
+          <BarChartHorizontal
+            data={data?.origens ?? []}
+            xKey="origem"
+            yKey={["dentroPrazo", "proximoLimite", "foraPrazo"]}
+            config={{
+              dentroPrazo: { label: "Dentro do prazo", color: "var(--success)" },
+              proximoLimite: { label: "A 1–2 dias do limite", color: "var(--warning)" },
+              foraPrazo: { label: "Fora do prazo", color: "var(--destructive)" },
+            }}
+            yAxisWidth={260}
+            rowHeight={36}
+            stackId="origem"
+            totalKey="total"
+            showValues
+          />
+          <FaixaLegend hachurarForaPrazo={false} mostrarProximoLimite />
+        </ChartCard>
+      )}
+
       <ChartCard
         title="Autos de Infração não Processados"
         dataTable={
@@ -74,10 +122,9 @@ export function Processamento() {
           series={[{ key: "total", label: "Não processados", color: "var(--chart-1)" }]}
           totalKey="total"
           topColor={(r) => corPendentes(Boolean(r.dentroPrazo))}
-          hatch={(r) => !r.dentroPrazo}
           tooltip={<FaixaTooltip />}
         />
-        <FaixaLegend />
+        <FaixaLegend hachurarForaPrazo={false} />
       </ChartCard>
 
       <ChartCard

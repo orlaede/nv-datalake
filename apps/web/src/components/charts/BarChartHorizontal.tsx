@@ -13,6 +13,8 @@ export function BarChartHorizontal({
   showValues = false,
   rowHeight,
   onBarClick,
+    stackId,
+    totalKey,
 }: ChartProps & {
   className?: string
   tickColor?: string
@@ -23,6 +25,10 @@ export function BarChartHorizontal({
   rowHeight?: number
   /** Torna as barras clicáveis; recebe a linha de dados da barra. */
   onBarClick?: (row: Record<string, unknown>) => void
+    /** Empilha as séries para representar partes de um total. */
+    stackId?: string
+    /** Valor total exibido ao fim da barra empilhada. */
+    totalKey?: string
 }) {
   const keys = Array.isArray(yKey) ? yKey : [yKey]
   const tick = { fontSize: 11, ...(tickColor ? { fill: tickColor } : {}) }
@@ -46,16 +52,19 @@ export function BarChartHorizontal({
           interval={0}
         />
         <ChartTooltip cursor={{ fill: "var(--muted)", opacity: 0.4 }} content={<ChartTooltipContent />} />
-        {keys.map((key) => (
+          {keys.map((key, index) => (
           <Bar
             key={key}
             dataKey={key}
+              stackId={stackId}
             fill={`var(--color-${key})`}
             radius={4}
             className={onBarClick ? "cursor-pointer" : undefined}
             onClick={onBarClick ? (entry) => onBarClick(entry.payload as Record<string, unknown>) : undefined}
           >
-            {showValues && <LabelList dataKey={key} position="right" className="fill-foreground text-xs" />}
+              {showValues && (!stackId || index === keys.length - 1) && (
+                <LabelList dataKey={stackId ? totalKey ?? key : key} position="right" className="fill-foreground text-xs" />
+              )}
           </Bar>
         ))}
       </BarChart>

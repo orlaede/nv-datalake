@@ -26,14 +26,20 @@ export function FaixaTooltip({ active, payload }: { active?: boolean; payload?: 
 }
 
 // Legenda: além da cor, "fora do prazo" é hachurado.
-export function FaixaLegend() {
+export function FaixaLegend({
+  hachurarForaPrazo = true,
+  mostrarProximoLimite = false,
+}: { hachurarForaPrazo?: boolean; mostrarProximoLimite?: boolean } = {}) {
   const itens = [
     { label: "Dentro do prazo", style: { backgroundColor: "var(--success)" } },
+    ...(mostrarProximoLimite
+      ? [{ label: "A 1–2 dias do limite", style: { backgroundColor: "var(--warning)" } }]
+      : []),
     {
       label: "Fora do prazo",
-      style: {
-        backgroundImage: "repeating-linear-gradient(45deg, var(--destructive) 0 3px, var(--card) 3px 5px)",
-      },
+      style: hachurarForaPrazo
+        ? { backgroundImage: "repeating-linear-gradient(45deg, var(--destructive) 0 3px, var(--card) 3px 5px)" }
+        : { backgroundColor: "var(--destructive)" },
     },
   ]
   return (

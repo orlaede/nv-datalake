@@ -10,6 +10,7 @@ export const processamentoRouter = Router()
 const RETORNOS_IGNORADOS = ["SUCESSO", "Não Informado"]
 
 type Faixa = { rotulo: string; de: number; ate: number | null; total: number; dentroPrazo: boolean }
+type OrigemStats = { origem: string; prazo: number; total: number; dentroPrazo: number; proximoLimite: number; foraPrazo: number }
 
 const LIMITE_FAIXAS = 30
 const LARGURA_FAIXA = 5
@@ -40,12 +41,15 @@ processamentoRouter.get("/api/processamento/stats", async (req, res) => {
   })
 
   const prazoResult = await pool.query(
-    origem
-      ? `SELECT p.num_dias_retencao_processamento AS prazo
-         FROM gold.dim_origem o
-         JOIN gold.dim_parametro_origem p ON p.sk_origem = o.sk_origem
-         WHERE o.nome = $1`
-      : `SELECT max(num_dias_retencao_processamento) AS prazo FROM gold.dim_parametro_origem`,
+    `SELECT max(p.num_dias_retencao_processamento) AS prazo,
+            COALESCE(
+              json_agg(json_build_object('origem', o.nome, 'prazo', p.num_dias_retencao_processamento) ORDER BY o.nome)
+                FILTER (WHERE p.num_dias_retencao_processamento IS NOT NULL),
+              '[]'::json
+            ) AS origens
+     FROM gold.dim_origem o
+     LEFT JOIN gold.dim_parametro_origem p ON p.sk_origem = o.sk_origem
+     ${origem ? "WHERE o.nome = $1" : ""}`,
     origem ? [origem] : [],
   )
   const prazoRaw = prazoResult.rows[0]?.prazo
@@ -58,18 +62,30 @@ processamentoRouter.get("/api/processamento/stats", async (req, res) => {
   const extra = "ai.num_dias >= 1 AND p.num_dias_retencao_processamento IS NOT NULL"
   const where = clause ? `${clause} AND ${extra}` : `WHERE ${extra}`
   const result = await pool.query(
-    `SELECT ai.num_dias AS num_dias,
+    `SELECT origem.nome AS origem,
+            ai.num_dias AS num_dias,
             p.num_dias_retencao_processamento AS prazo,
             count(*) AS total,
             count(*) FILTER (WHERE ai.status_arquivamento IS DISTINCT FROM 'PROCESSADO_SUCESSO') AS nao_processados
      FROM ${GOLD_STAR_FROM}
        JOIN gold.dim_parametro_origem p ON p.sk_origem = ai.sk_origem
      ${where}
-     GROUP BY ai.num_dias, p.num_dias_retencao_processamento`,
+     GROUP BY origem.nome, ai.num_dias, p.num_dias_retencao_processamento`,
     params,
   )
 
   const faixas = buildFaixas(prazo, prazo)
+  const origens = new Map<string, OrigemStats>()
+  for (const row of (prazoResult.rows[0]?.origens ?? []) as { origem: string; prazo: number }[]) {
+    origens.set(row.origem, {
+      origem: row.origem,
+      prazo: Number(row.prazo),
+      total: 0,
+      dentroPrazo: 0,
+      proximoLimite: 0,
+      foraPrazo: 0,
+    })
+  }
   let totalAutos = 0
   let naoProcessadosTotal = 0
   let dentroPrazo = 0
@@ -78,6 +94,15 @@ processamentoRouter.get("/api/processamento/stats", async (req, res) => {
     const dias = Number(row.num_dias)
     const total = Number(row.total)
     const naoProcessados = Number(row.nao_processados)
+    if (typeof row.origem === "string") {
+      const origemStats = origens.get(row.origem)
+      if (origemStats) {
+        origemStats.total += naoProcessados
+        if (dias > Number(row.prazo)) origemStats.foraPrazo += naoProcessados
+        else if (dias >= Number(row.prazo) - 2) origemStats.proximoLimite += naoProcessados
+        else origemStats.dentroPrazo += naoProcessados
+      }
+    }
     totalAutos += total
     naoProcessadosTotal += naoProcessados
     if (dias <= Number(row.prazo)) dentroPrazo += naoProcessados
@@ -88,7 +113,7 @@ processamentoRouter.get("/api/processamento/stats", async (req, res) => {
     }
   }
 
-  res.json({ prazo, totalAutos, processados: totalAutos - naoProcessadosTotal, dentroPrazo, foraPrazo, faixas })
+  res.json({ prazo, totalAutos, processados: totalAutos - naoProcessadosTotal, dentroPrazo, foraPrazo, faixas, origens: [...origens.values()] })
 })
 
 processamentoRouter.get("/api/processamento/retornos", async (req, res) => {
