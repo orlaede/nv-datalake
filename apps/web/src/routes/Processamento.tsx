@@ -49,7 +49,6 @@ export function Processamento() {
     queryFn: () => apiGet<{ retornos: { tipo: string; total: number }[] }>("/api/processamento/retornos", filters),
   })
 
-  const prazo = data?.prazo != null ? String(data.prazo) : "—"
   const faixas = data?.faixas ?? []
 
   return (
